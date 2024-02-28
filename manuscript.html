@@ -75,9 +75,15 @@ ul.task-list li input[type="checkbox"] {
 <li>in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques</li>
 <li>if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data</li>
 <li>both missingness and multilevel structures require advanced statistical techniques</li>
-<li>this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data.</li>
-<li>we illustrate the use of the software by means of three case studies from the social and biomedical sciences.</li>
+<li>this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data</li>
+<li>we illustrate the use of the software by means of a case study</li>
 </ol>
+<blockquote class="blockquote">
+<p>Recipe for a level-1 target 1. Define the most general analytic model to be applied to imputed data; 2. Select a 2l method that imputes close to the data; 3. Include all level-1 variables; 4. Include the disaggregated cluster means of all level-1 variables; 5. Include all level-1 interactions implied by the analytic model; 6. Include all level-2 predictors; 7. Include all level-2 interactions implied by the analytic model; 8. Include all cross-level interactions implied by the analytic model; 9. Include predictors related to the missingness and the target; 10. Exclude any terms involving the target</p>
+</blockquote>
+<blockquote class="blockquote">
+<p>Recipe for a level-2 target 1. Define the most general analytic model to be applied to imputed data; 2. Select a 2lonly method that imputes close to the data; 3. Include the cluster means of all level-1 variables; 4. Include the cluster means of all level-1 interactions; 5. Include all level-2 predictors; 6. Include all interactions of level-2 variables; 7. Include predictors related to the missingness and the target; 8. Exclude any terms involving the target</p>
+</blockquote>
 </section>
 
 </main>
