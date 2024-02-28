@@ -6,6 +6,17 @@ format: html
 
 # Outline
 
+- motivation and intended audience
+- the mice framework/package
+- background info on missingness mechanisms etc.
+- case study
+
+# Intended audience
+
+This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation.
+
+# Introduction
+
 1. missing data occur often in data with human subjects
 2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest
 3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques
@@ -13,3 +24,41 @@ format: html
 4. both missingness and multilevel structures require advanced statistical techniques
 5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data
 6. we illustrate the use of the software by means of a case study
+
+# Methods
+
+The [R]{.proglang} package [mice]{.pkg} provides a framework for imputing incomplete data on a variable-by-variable basis. The [mice]{.fct} function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments
+
+```r
+mice(data, m, method, predictorMatrix, ...)
+```
+
+where `data` refers to the incomplete dataset, `m` determines the number of imputations, `method` denotes the functional form of the imputation model and `predictorMatrix` specifies the interrelational dependencies between variables and imputation models (i.e., the set of predictors to be used for imputing each incomplete variable).
+
+
+# References
+
+<!-- FIMD, section 7.10 -->
+
+<!-- > Recipe for a level-1 target:  -->
+<!-- 1.	Define the most general analytic model to be applied to imputed data;  -->
+<!-- 2.	Select a 2l method that imputes close to the data;  -->
+<!-- 3.	Include all level-1 variables;  -->
+<!-- 4.	Include the disaggregated cluster means of all level-1 variables;  -->
+<!-- 5.	Include all level-1 interactions implied by the analytic model;  -->
+<!-- 6.	Include all level-2 predictors;  -->
+<!-- 7.	Include all level-2 interactions implied by the analytic model;  -->
+<!-- 8.	Include all cross-level interactions implied by the analytic model;  -->
+<!-- 9.	Include predictors related to the missingness and the target;  -->
+<!-- 10.	Exclude any terms involving the target -->
+
+<!-- > Recipe for a level-2 target:  -->
+<!-- 1.	Define the most general analytic model to be applied to imputed -->
+<!-- data;  -->
+<!-- 2.	Select a 2lonly method that imputes close to the data;  -->
+<!-- 3.	Include the cluster means of all level-1 variables;  -->
+<!-- 4.	Include the cluster means of all level-1 interactions;  -->
+<!-- 5.	Include all level-2 predictors;  -->
+<!-- 6.	Include all interactions of level-2 variables;  -->
+<!-- 7.	Include predictors related to the missingness and the target;  -->
+<!-- 8.	Exclude any terms involving the target -->

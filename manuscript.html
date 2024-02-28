@@ -21,6 +21,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -69,15 +103,59 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="outline" class="level1">
 <h1>Outline</h1>
+<ul>
+<li>motivation and intended audience</li>
+<li>the mice framework/package</li>
+<li>background info on missingness mechanisms etc.</li>
+<li>case study</li>
+</ul>
+</section>
+<section id="intended-audience" class="level1">
+<h1>Intended audience</h1>
+<p>This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation.</p>
+</section>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
 <ol type="1">
 <li>missing data occur often in data with human subjects</li>
 <li>missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest</li>
 <li>in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques</li>
 <li>if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data</li>
 <li>both missingness and multilevel structures require advanced statistical techniques</li>
-<li>this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data.</li>
-<li>we illustrate the use of the software by means of three case studies from the social and biomedical sciences.</li>
+<li>this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data</li>
+<li>we illustrate the use of the software by means of a case study</li>
 </ol>
+</section>
+<section id="methods" class="level1">
+<h1>Methods</h1>
+<p>The <span class="proglang">R</span> package <span class="pkg">mice</span> provides a framework for imputing incomplete data on a variable-by-variable basis. The <span class="fct">mice</span> function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mice</span>(data, m, method, predictorMatrix, ...)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>where <code>data</code> refers to the incomplete dataset, <code>m</code> determines the number of imputations, <code>method</code> denotes the functional form of the imputation model and <code>predictorMatrix</code> specifies the interrelational dependencies between variables and imputation models (i.e., the set of predictors to be used for imputing each incomplete variable).</p>
+</section>
+<section id="references" class="level1">
+<h1>References</h1>
+<!-- FIMD, section 7.10 -->
+<!-- > Recipe for a level-1 target:  -->
+<!-- 1. Define the most general analytic model to be applied to imputed data;  -->
+<!-- 2. Select a 2l method that imputes close to the data;  -->
+<!-- 3. Include all level-1 variables;  -->
+<!-- 4. Include the disaggregated cluster means of all level-1 variables;  -->
+<!-- 5. Include all level-1 interactions implied by the analytic model;  -->
+<!-- 6. Include all level-2 predictors;  -->
+<!-- 7. Include all level-2 interactions implied by the analytic model;  -->
+<!-- 8. Include all cross-level interactions implied by the analytic model;  -->
+<!-- 9. Include predictors related to the missingness and the target;  -->
+<!-- 10.    Exclude any terms involving the target -->
+<!-- > Recipe for a level-2 target:  -->
+<!-- 1. Define the most general analytic model to be applied to imputed -->
+<!-- data;  -->
+<!-- 2. Select a 2lonly method that imputes close to the data;  -->
+<!-- 3. Include the cluster means of all level-1 variables;  -->
+<!-- 4. Include the cluster means of all level-1 interactions;  -->
+<!-- 5. Include all level-2 predictors;  -->
+<!-- 6. Include all interactions of level-2 variables;  -->
+<!-- 7. Include predictors related to the missingness and the target;  -->
+<!-- 8. Exclude any terms involving the target -->
 </section>
 
 </main>
