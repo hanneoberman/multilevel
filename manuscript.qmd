@@ -1,0 +1,15 @@
+---
+title: "Imputation of incomplete multilevel data"
+author: "Hanne Oberman"
+format: html
+---
+
+# Outline
+
+1. missing data occur often in data with human subjects
+2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest
+3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques
+4. if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data
+4. both missingness and multilevel structures require advanced statistical techniques
+5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data
+6. we illustrate the use of the software by means of a case study
