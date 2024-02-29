@@ -117,6 +117,70 @@ Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. t
 9. If error... (e.g. rescale variables by converting imputations to long format, mutate, then back to mids)
 10. For further multilevel model building, AICs could be pooled, how?
 
+The most general analytic model to be applied to imputed data (Hox et al, 2018).
+
+\begin{align}
+\text{popularity}_{ij} = &\gamma_{00}+ \gamma_{10} \text{gender}_{ij} + \gamma_{20} \text{extraversion}_{ij} + \\
+&\gamma_{01} \text{experience}_j + \gamma_{21} \text{extraversion}_{ij} \times \text{experience}_j + \\
+&u_{2j} \text{extraversion}_{ij} + u_{0j}+ e_{ij} 
+\end{align}
+
+<!-- u_{1j} \text{gender}_{ij} +  -->
+
+Setup `R` environment
+```{r}
+library(mice)     # for imputation
+library(ggmice)   # for visualization
+library(ggplot2)  # for visualization
+library(dplyr)    # for data manipulation
+library(lme4)     # for multilevel modeling
+```
+
+
+Load the data
+```{r}
+load("data/popular_MAR.RData")
+```
+
+Inspect the missingness
+```{r}
+plot_pattern(popular_MAR)
+```
+
+Fix cluster-level missingness determinately
+```{r}
+meth <- make.method(popular_MAR)
+meth["experience_j"] <- "2lonly.mean"
+meth[meth != "2lonly.mean"] <- ""
+pred <- make.predictorMatrix(popular_MAR)
+pred[, "cluster_id"] <- -2
+imp <- mice(
+  popular_MAR, 
+  m = 1, 
+  method = meth, 
+  predictorMatrix = pred,
+  maxit = 1)
+plot_pattern(complete(imp))
+```
+
+Does not work if there are inconsistencies within clusters! But we can do this manually.
+
+```{r}
+popular_MAR |>
+  group_by(cluster_id) |>
+  reframe(teacher_experience = unique(experience_j))
+```
+
+This shows us that in the first cluster teacher experience of 4 and 24 is recorded.
+
+```{r}
+popular_MAR |>
+  filter(cluster_id == 1) |>
+  ggplot(aes(experience_j)) + geom_histogram()
+```
+
+For most pupils, teacher experience is 24. We can quite safely assume that the teacher expeience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24.
+
 # References
 
 
