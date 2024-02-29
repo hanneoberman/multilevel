@@ -2,11 +2,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.450">
+<meta name="generator" content="quarto-1.3.433">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Hanne Oberman">
+<meta name="author" content="Hanne Oberman and Gerko Vink">
 
 <title>Imputation of incomplete multilevel data</title>
 <style>
@@ -74,10 +74,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="fullcontent">
+<body>
 
 <div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
-
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#intended-audience" id="toc-intended-audience" class="nav-link active" data-scroll-target="#intended-audience">Intended audience</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">Introduction</a>
+  <ul class="collapse">
+  <li><a href="#scenario-1-missingness-is-not-data-dependent" id="toc-scenario-1-missingness-is-not-data-dependent" class="nav-link" data-scroll-target="#scenario-1-missingness-is-not-data-dependent">Scenario 1: Missingness is not data dependent</a></li>
+  <li><a href="#scenario-2-missingness-is-observed-data-dependent" id="toc-scenario-2-missingness-is-observed-data-dependent" class="nav-link" data-scroll-target="#scenario-2-missingness-is-observed-data-dependent">Scenario 2: Missingness is observed data dependent</a></li>
+  <li><a href="#scenario-3-missingness-is-not-data-dependent" id="toc-scenario-3-missingness-is-not-data-dependent" class="nav-link" data-scroll-target="#scenario-3-missingness-is-not-data-dependent">Scenario 3: Missingness is not data dependent</a></li>
+  </ul></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a></li>
+  <li><a href="#case-study" id="toc-case-study" class="nav-link" data-scroll-target="#case-study">Case study</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+</div>
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
@@ -92,7 +109,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Author</div>
     <div class="quarto-title-meta-contents">
-             <p>Hanne Oberman </p>
+             <p>Hanne Oberman and Gerko Vink </p>
           </div>
   </div>
     
@@ -103,15 +120,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<section id="outline" class="level1">
-<h1>Outline</h1>
-<ul>
-<li>motivation and intended audience</li>
-<li>the mice framework/package</li>
-<li>background info on missingness mechanisms etc.</li>
-<li>case study</li>
-</ul>
-</section>
 <section id="intended-audience" class="level1">
 <h1>Intended audience</h1>
 <p>This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation.</p>
@@ -139,12 +147,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="scenario-3-missingness-is-not-data-dependent" class="level2">
 <h2 class="anchored" data-anchor-id="scenario-3-missingness-is-not-data-dependent">Scenario 3: Missingness is not data dependent</h2>
 <p>But what if your missingness is related to the data that you cannot see? This would mean that no matter what type of analysis you perform on the observed information, your conclusions would be invalid. This is the third scenario: <strong>missing not at random (MNAR)</strong> (Rubin, 1976). Hand (2020) defines this as <em>unseen data dependent</em>. This is the most difficult scenario to deal with, as it is impossible to model the missing information based on the observed information alone and some form of <em>adjustment</em> is needed to arrive at the correct conclusion.</p>
-</section>
-</section>
-<section id="why-not-distinguish-between-missingness-mechanisms" class="level1 callout-info">
-<h1>why not distinguish between missingness mechanisms</h1>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+why not distinguish between missingness mechanisms
+</div>
+</div>
+<div class="callout-body-container callout-body">
 <p>explanation needed</p>
-</section>
+</div>
+</div>
 <ol type="1">
 <li>missing data occur often in data with human subjects</li>
 <li>missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest</li>
@@ -154,6 +169,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data</li>
 <li>we illustrate the use of the software by means of a case study</li>
 </ol>
+</section>
+</section>
 <section id="methods" class="level1">
 <h1>Methods</h1>
 <p>The <span class="proglang"><code>R</code></span> package <span class="pkg"><code>mice</code></span> provides a framework for imputing incomplete data on a variable-by-variable basis. The <span class="fct"><code>mice</code></span> function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments</p>

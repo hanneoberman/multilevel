@@ -1,15 +1,10 @@
 ---
 title: "Imputation of incomplete multilevel data"
-author: "Hanne Oberman"
-format: html
+author: "Hanne Oberman and Gerko Vink"
+format:
+  html:
+    toc: true
 ---
-
-# Outline
-
-- motivation and intended audience
-- the mice framework/package
-- background info on missingness mechanisms etc.
-- case study
 
 # Intended audience
 
@@ -40,7 +35,7 @@ The observed data dependency of MAR is very flexible assumption. It allows us to
 ## Scenario 3: Missingness is not data dependent
 But what if your missingness is related to the data that you cannot see? This would mean that no matter what type of analysis you perform on the observed information, your conclusions would be invalid. This is the third scenario: **missing not at random (MNAR)** (Rubin, 1976). Hand (2020) defines this as *unseen data dependent*. This is the most difficult scenario to deal with, as it is impossible to model the missing information based on the observed information alone and some form of *adjustment* is needed to arrive at the correct conclusion.
 
-::: {.callout-info}
+::: {.callout-note}
 # why not distinguish between missingness mechanisms
 explanation needed
 :::
