@@ -72,6 +72,21 @@ data;
 7.	Include predictors related to the missingness and the target;
 8.	Exclude any terms involving the target
 
+# Case study
+
+1. Load the data, make sure the variables are correctly formatted (e.g. numeric clustering variable)
+2. Explore the missingness
+2. Fix any cluster-level missingness determinately (note that `2l.only` methods do not work if there are inconsistencies, fix those first!)
+2. Re-evaluate the missingness
+3. Explore bivariate relations and associations with missingness indicators
+4. Determine the imputation methods
+5. Create the predictor matrix
+6. Impute the incomplete data
+7. Evaluate convergence
+8. Evaluate imputations
+9. Analyse and pool
+10. For further multilevel model building, AICs could be pooled, how?
+
 # References
 
 
