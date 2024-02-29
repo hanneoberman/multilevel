@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.433">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -118,6 +118,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
+<p>In scientific research it is common to draw conclusions from data. In many cases, however, the available information may not be sufficient to arrive at the correct conclusion. This is a common scenario and extends far beyond the domain of missing values in data sets. In any case, when the available information is not sufficient, we need to apply some modeling to arrive at the correct conclusion.</p>
+<p>First and foremost, the best way to deal with unavailble information is to make sure that you have none. This is in itself impossible to attain, as one would need the potentially unavailable information to definitively prove that there is no deviation from the conclusions obtained on the available information. Since this is impossible to prove in practice, it is far easier to assume that we can use some modeling based on the available information to arrive at the correct conclusion.</p>
+<p>In such modeling methods, there are three possible scenarios.</p>
+<section id="scenario-1-missingness-is-not-data-dependent" class="level2">
+<h2 class="anchored" data-anchor-id="scenario-1-missingness-is-not-data-dependent">Scenario 1: Missingness is not data dependent</h2>
+<p>The first scenario is that analysis of the available information itself yields the correct conclusion. This is an ideal scenario, but it is most likely not the case. Rubin (1987) defines this scenario as <strong>missing completely at random</strong> (MCAR). Hand (2020) defines this - perhaps more intuitively - as <em>not data dependent</em>. There is, however, a caveat with Hand’s terminology as <em>data dependent</em> may lull the analyst into the false sense of security of assuming that the available data is all data. Because we would like to explicitly highlight the possibility that more data is always available, and that not considering this data may lead to incorrect conclusions, we favor the explicit use of the term <em>missingness</em> in Rubin’s terminology. Therefore, we’d like to stick with Rubin’s MCAR.</p>
+<p>With MCAR, the missingness in the data is unrelated to any observed information (i.e.&nbsp;data points), nor to any unobserved information. In terms of classical statistics, this would mean that a random and sufficient sample from a population would be randomly incomplete in such a way that analysis of the incomplete data would yield a sufficient statistic. You may recognize this as the age-old adage <em>“the sample is representative of the population”</em>, but now the sample is both representative and incomplete. The bottom line is that we can ignore the two missingness mechanisms that are at play here:</p>
+<ol type="1">
+<li>First, the population has been sampled, meaning that the information that we have obtained is incomplete. Random sampling makes this mechanism ignorable and analyzing a sufficiently large sample data will - in the limit - yield the same conclusion as analyzing the population itself.</li>
+<li>Second, the sample is now incomplete. This incompleteness is also assumed to be random and thereby ignorable. In other words, we have merely obtained a smaller sample of the information than originally would have been intended. But analyzing this sample, given that it is still sufficiently large, will still yield the same conclusion as analyzing the population.</li>
+</ol>
+<p>In terms of probability we could argue that with MCAR, the probability to be observed is the same for every obtained sequence of information. The complement, however, must also hold: the probability to be unobserved is the same for every unobtained sequence of information. We would like to note that this is a very strong assumption and is often not met in practice. We would also like to note that for structured data this does not mean that every cell has an equal probability to be unobserved. The distribution of random probabilities may change between columns in the data, for example, whilst still being fully random. But as long as this distribution is not related to the sampling, we can still assume that the data is MCAR.</p>
+</section>
+<section id="scenario-2-missingness-is-observed-data-dependent" class="level2">
+<h2 class="anchored" data-anchor-id="scenario-2-missingness-is-observed-data-dependent">Scenario 2: Missingness is observed data dependent</h2>
+<p>This assumption is violated when the probability of being unobserved - or observed, for that matter - is dependent on more than one dimension in the available information. For example when the probability of being unobserved is dependent on the value of another variable in the data, we have a clear and proven deviation from MCAR. This would bring us to the second scenario: <strong>missing at random (MAR)</strong> (Rubin, 1976). With MAR the observed information holds the key to unlocking the missing information. In Hand’s terminology, this would be <em>seen data dependent</em>. The difficulty here is that - unlike with MCAR, where the missingness mechanism may not be dependent on any observed nor unobserved data - with MAR, it may only be observed data dependent.</p>
+<p>The observed data dependency of MAR is very flexible assumption. It allows us to model the unobserved information based on the observed information. In simple terms, if we define a model for all unobserved information, based on all observed information and combine that model with the observed data model, we’d be able to draw correct conclusions. Bayesians would recognize this as a form of conditional probability, where the probability of the unobserved information is conditional on the observed information. Specifying a good prior for the unobserved information is crucial here, as it will determine the outcome of the model. Any sufficient prior will yield a correct posterior predictive distribution and, hence, a correct conclusion. The flexibility in the Bayesian approach is that it allows for straightforward seperation of the missingness and analysis problems for any scenario that is MAR.</p>
+</section>
+<section id="scenario-3-missingness-is-not-data-dependent" class="level2">
+<h2 class="anchored" data-anchor-id="scenario-3-missingness-is-not-data-dependent">Scenario 3: Missingness is not data dependent</h2>
+<p>But what if your missingness is related to the data that you cannot see? This would mean that no matter what type of analysis you perform on the observed information, your conclusions would be invalid. This is the third scenario: <strong>missing not at random (MNAR)</strong> (Rubin, 1976). Hand (2020) defines this as <em>unseen data dependent</em>. This is the most difficult scenario to deal with, as it is impossible to model the missing information based on the observed information alone and some form of <em>adjustment</em> is needed to arrive at the correct conclusion.</p>
+</section>
+</section>
+<section id="why-not-distinguish-between-missingness-mechanisms" class="level1 callout-info">
+<h1>why not distinguish between missingness mechanisms</h1>
+<p>explanation needed</p>
+</section>
 <ol type="1">
 <li>missing data occur often in data with human subjects</li>
 <li>missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest</li>
@@ -127,7 +154,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data</li>
 <li>we illustrate the use of the software by means of a case study</li>
 </ol>
-</section>
 <section id="methods" class="level1">
 <h1>Methods</h1>
 <p>The <span class="proglang"><code>R</code></span> package <span class="pkg"><code>mice</code></span> provides a framework for imputing incomplete data on a variable-by-variable basis. The <span class="fct"><code>mice</code></span> function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments</p>
