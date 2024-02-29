@@ -69,6 +69,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="manuscript_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="manuscript_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 </head>
 
@@ -128,34 +130,56 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="methods" class="level1">
 <h1>Methods</h1>
-<p>The <span class="proglang">R</span> package <span class="pkg">mice</span> provides a framework for imputing incomplete data on a variable-by-variable basis. The <span class="fct">mice</span> function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments</p>
+<p>The <span class="proglang"><code>R</code></span> package <span class="pkg"><code>mice</code></span> provides a framework for imputing incomplete data on a variable-by-variable basis. The <span class="fct"><code>mice</code></span> function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mice</span>(data, m, method, predictorMatrix, ...)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>where <code>data</code> refers to the incomplete dataset, <code>m</code> determines the number of imputations, <code>method</code> denotes the functional form of the imputation model and <code>predictorMatrix</code> specifies the interrelational dependencies between variables and imputation models (i.e., the set of predictors to be used for imputing each incomplete variable).</p>
+<p>where <code>data</code> refers to the incomplete dataset, <code>m</code> determines the number of imputations, <code>method</code> denotes the functional form of the imputation model per variable and <code>predictorMatrix</code> specifies the interrelational dependencies between the variables and imputation models (i.e., the set of predictors to be used for imputing each incomplete variable).</p>
+<p>The object supplied as <code>data</code> should be tabular (e.g.&nbsp;a <code>data.frame</code> with <span class="math inline">\(n\)</span> rows and <span class="math inline">\(p\)</span> variables, with missing values coded as <code>NA</code>). For multilevel imputation models, a numeric clustering variable is required.</p>
+<p>The number of imputations <code>m</code> should be determined based on the severity of the missing data problem and the intended analysis model of substantive interest. Van Buuren (2018, <span class="math inline">\(\S\)</span> 2.8) suggests using the default <code>m = 5</code> for imputation model building, and to increase <code>m</code> as required after initial exploration.</p>
+<p>The <code>method</code> argument specifies the imputation method to be used for each column in data. If not supplied by the user, <code>method</code> defaults to convenient standard methods for single level continuous and categorical data. Since these do not take any clustering or multilevel structures into account, valid imputation of incomplete multilevel data will typically require a user-supplied methods vector. The tables 7.2, 7.3 and 7.4 in van Buuren (2018, <span class="math inline">\(\S\)</span> 7.6, <span class="math inline">\(\S\)</span> 7.7 and <span class="math inline">\(\S\)</span> 7.8, respectively) provide an overview of the available methods to perform univariate multilevel imputation.</p>
+<p>With the <code>predictorMatix</code> argument, <code>mice</code> users can define which columns should be used as predictors in each imputation model. The default predictor matrix is a square binary matrix with the variables to be imputed in the rows and the imputation model predictors in the columns. The default <code>predictorMatrix</code> will not be suitable for multilevel data. Univariate imputation methods for two-level data use other codes than <code>0</code> and <code>1</code>. In the predictor matrix, <code>-2</code> denotes the class variable, a value <code>1</code> indicates a fixed effect and a value <code>2</code> indicates a random effect. Additionally, the method <code>2l.pan</code> uses codes <code>3</code> and <code>4</code> to add class means to codes <code>1</code> and <code>2</code> respectively.</p>
+<!-- 2l.bin, 2l.lmer, 2l.norm, 2l.pan, 2lonly.mean, 2lonly.norm and 2lonly.pmm use code -2 to indicate the class variable -->
+<!-- -  2l.bin, 2l.lmer, 2l.norm and 2l.pan use code 2 to indicate the random effects -->
+<!-- -  2l.pan uses codes 3 and 4 to add class means to codes 1 and 2 respectively -->
+<p>FIMD, section 7.10</p>
+<blockquote class="blockquote">
+<p>Recipe for a level-1 target: 1. Define the most general analytic model to be applied to imputed data; 2. Select a 2l method that imputes close to the data; 3. Include all level-1 variables; 4. Include the disaggregated cluster means of all level-1 variables; 5. Include all level-1 interactions implied by the analytic model; 6. Include all level-2 predictors; 7. Include all level-2 interactions implied by the analytic model; 8. Include all cross-level interactions implied by the analytic model; 9. Include predictors related to the missingness and the target; 10. Exclude any terms involving the target</p>
+</blockquote>
+<blockquote class="blockquote">
+<p>Recipe for a level-2 target: 1. Define the most general analytic model to be applied to imputed data; 2. Select a 2lonly method that imputes close to the data; 3. Include the cluster means of all level-1 variables; 4. Include the cluster means of all level-1 interactions; 5. Include all level-2 predictors; 6. Include all interactions of level-2 variables; 7. Include predictors related to the missingness and the target; 8. Exclude any terms involving the target</p>
+</blockquote>
+</section>
+<section id="case-study" class="level1">
+<h1>Case study</h1>
+<p>Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e.&nbsp;the most general analytic model to be applied to imputed data).</p>
+<ol type="1">
+<li>Load the data, make sure the variables are correctly formatted (e.g.&nbsp;numeric clustering variable)</li>
+<li>Explore the missingness</li>
+<li>Fix any cluster-level missingness determinately (note that <code>2l.only</code> methods do not work if there are inconsistencies, fix those first!)</li>
+<li>Re-evaluate the missingness</li>
+<li>Explore bivariate relations and associations with missingness indicators (optionally test the associations?)</li>
+<li>For each incomplete variable:</li>
+</ol>
+<ul>
+<li>Determine the imputation method</li>
+<li>Choose imputation model predictors (see recipe)</li>
+</ul>
+<ol start="5" type="1">
+<li>Set methods vector and predictor matrix</li>
+<li>Impute the incomplete data</li>
+<li>If error…</li>
+<li>After successful run:</li>
+</ol>
+<ul>
+<li>Evaluate convergence</li>
+<li>Evaluate imputations</li>
+</ul>
+<ol start="9" type="1">
+<li>Analyze and pool</li>
+<li>For further multilevel model building, AICs could be pooled, how?</li>
+</ol>
 </section>
 <section id="references" class="level1">
 <h1>References</h1>
-<!-- FIMD, section 7.10 -->
-<!-- > Recipe for a level-1 target:  -->
-<!-- 1. Define the most general analytic model to be applied to imputed data;  -->
-<!-- 2. Select a 2l method that imputes close to the data;  -->
-<!-- 3. Include all level-1 variables;  -->
-<!-- 4. Include the disaggregated cluster means of all level-1 variables;  -->
-<!-- 5. Include all level-1 interactions implied by the analytic model;  -->
-<!-- 6. Include all level-2 predictors;  -->
-<!-- 7. Include all level-2 interactions implied by the analytic model;  -->
-<!-- 8. Include all cross-level interactions implied by the analytic model;  -->
-<!-- 9. Include predictors related to the missingness and the target;  -->
-<!-- 10.    Exclude any terms involving the target -->
-<!-- > Recipe for a level-2 target:  -->
-<!-- 1. Define the most general analytic model to be applied to imputed -->
-<!-- data;  -->
-<!-- 2. Select a 2lonly method that imputes close to the data;  -->
-<!-- 3. Include the cluster means of all level-1 variables;  -->
-<!-- 4. Include the cluster means of all level-1 interactions;  -->
-<!-- 5. Include all level-2 predictors;  -->
-<!-- 6. Include all interactions of level-2 variables;  -->
-<!-- 7. Include predictors related to the missingness and the target;  -->
-<!-- 8. Exclude any terms involving the target -->
 </section>
 
 </main>
