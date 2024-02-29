@@ -97,7 +97,7 @@ data;
 
 # Case study
 
-Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. the most general analytic model to be applied to imputed data).
+Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. the most general analytic model to be applied to imputed data), plus an assumed missingness mechanism. This tutorial assumes M(C)AR, for MNAR see Munoz et al.
 
 1. Load the data, make sure the variables are correctly formatted (e.g. numeric clustering variable)
 2. Explore the missingness
@@ -114,6 +114,7 @@ Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. t
   - Evaluate convergence
   - Evaluate imputations
 9. Analyze and pool
+9. If error... (e.g. rescale variables by converting imputations to long format, mutate, then back to mids)
 10. For further multilevel model building, AICs could be pooled, how?
 
 # References
