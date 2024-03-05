@@ -6,7 +6,9 @@ library(ggplot2)
 theme_set(theme_classic())
 
 # complete data
-popular <- haven::read_sav("data/popular2.sav") |> zap_formats() |> zap_labels()
+popular <- haven::read_sav("data/popular2.sav") |> 
+  zap_formats()
+
 # rename columns
 popular <- popular |> 
   dplyr::rename(
@@ -18,6 +20,12 @@ popular <- popular |>
     experience_j = texp,
     assessment_ij = popteach
 )
+
+# convert gender to factor
+popular$gender_ij <- factor(popular$gender_ij, levels = c(0, 1), labels = c("boy", "girl"))
+
+# remove labels other variables
+popular <- zap_label(popular)
 
 # reorder columns, drop unused ones
 popular <- popular[, c("unit_id", "cluster_id", "popularity_ij", "gender_ij", "extraversion_ij", "experience_j", "assessment_ij")]
@@ -40,7 +48,7 @@ lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1  + extraver
 lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id), data = popular, REML = FALSE)
 
 # save as RData
-save(popular, file = "popular.RData")
+save(popular, file = "data/popular.RData")
 
 # incomplete data
 set.seed(234)
@@ -50,7 +58,7 @@ patterns <- rbind(
   c(1, 1, 0, 1, 0, 1, 1),
   c(1, 1, 0, 1, 0, 1, 0),
   c(1, 1, 0, 1, 1, 1, 0))
-frequency <- c(0.5, 0.1, 0.3, 0.1)
+frequency <- c(0.5, 0.15, 0.3, 0.05)
 popular_MAR <- split(popular, ~cluster_id) |>
   purrr::map_dfr(~ampute(
     .x, 
@@ -64,12 +72,15 @@ md.pattern(popular_MAR)
 
 # add case with missing teacher assessment and teacher experience
 popular_MAR[2, c("experience_j", "assessment_ij")] <- NA
+# add cases with missing gender for kids with low popularity
+index <- floor(popular$popularity_ij) <= min(floor(popular$popularity_ij))
+popular_MAR[index, "gender_ij"] <- NA
 
 # evaluate missing data pattern
 md.pattern(popular_MAR)
 
 # save as RData
-save(popular_MAR, file = "popular_MAR.RData")
+save(popular_MAR, file = "data/popular_MAR.RData")
 
 # CCA
 

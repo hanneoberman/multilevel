@@ -93,7 +93,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#scenario-3-missingness-may-also-relate-to-unavailable-information" id="toc-scenario-3-missingness-may-also-relate-to-unavailable-information" class="nav-link" data-scroll-target="#scenario-3-missingness-may-also-relate-to-unavailable-information">Scenario 3: Missingness may also relate to unavailable information</a></li>
   </ul></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a></li>
-  <li><a href="#case-study" id="toc-case-study" class="nav-link" data-scroll-target="#case-study">Case study</a></li>
+  <li><a href="#case-study" id="toc-case-study" class="nav-link" data-scroll-target="#case-study">Case study</a>
+  <ul class="collapse">
+  <li><a href="#complete-case-analysis" id="toc-complete-case-analysis" class="nav-link" data-scroll-target="#complete-case-analysis">Complete case analysis</a></li>
+  <li><a href="#imputation" id="toc-imputation" class="nav-link" data-scroll-target="#imputation">Imputation</a></li>
+  <li><a href="#sandbox" id="toc-sandbox" class="nav-link" data-scroll-target="#sandbox">Sandbox</a></li>
+  </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
@@ -189,24 +194,58 @@ Distinguishing beteen missingness mechanisms.
 <p>The <span class="proglang"><code>R</code></span> package <span class="pkg"><code>mice</code></span> provides a framework for imputing incomplete data on a variable-by-variable basis. The <span class="fct"><code>mice</code></span> function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mice</span>(data, m, method, predictorMatrix, ...)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>where <code>data</code> refers to the incomplete dataset, <code>m</code> determines the number of imputations, <code>method</code> denotes the functional form of the imputation model per variable and <code>predictorMatrix</code> specifies the interrelational dependencies between the variables and imputation models (i.e., the set of predictors to be used for imputing each incomplete variable).</p>
-<p>The object supplied as <code>data</code> should be tabular (e.g.&nbsp;a <code>data.frame</code> with <span class="math inline">\(n\)</span> rows and <span class="math inline">\(p\)</span> variables, with missing values coded as <code>NA</code>). For multilevel imputation models, a numeric clustering variable is required.</p>
+<p>The object supplied as <code>data</code> should be tabular (e.g.&nbsp;a <code>data.frame</code> with <span class="math inline">\(n\)</span> rows and <span class="math inline">\(p\)</span> variables, with missing values coded as <code>NA</code>). For multilevel imputation models, a clustering variable is required. The clustering variable should be a factor or an integer vector, with each level representing a unique cluster. Moreover, the data should be in ‘long’ format, with each row representing a unique unit-level observation. The multilevel imputation functions implemented in <code>mice</code> will not work with ‘wide’ data, where each row represents a cluster and the columns represent the unit-level observations.</p>
 <p>The number of imputations <code>m</code> should be determined based on the severity of the missing data problem and the intended analysis model of substantive interest. Van Buuren (2018, <span class="math inline">\(\S\)</span> 2.8) suggests using the default <code>m = 5</code> for imputation model building, and to increase <code>m</code> as required after initial exploration.</p>
-<p>The <code>method</code> argument specifies the imputation method to be used for each column in data. If not supplied by the user, <code>method</code> defaults to convenient standard methods for single level continuous and categorical data. Since these do not take any clustering or multilevel structures into account, valid imputation of incomplete multilevel data will typically require a user-supplied methods vector. The tables 7.2, 7.3 and 7.4 in van Buuren (2018, <span class="math inline">\(\S\)</span> 7.6, <span class="math inline">\(\S\)</span> 7.7 and <span class="math inline">\(\S\)</span> 7.8, respectively) provide an overview of the available methods to perform univariate multilevel imputation.</p>
+<p>The <code>method</code> argument specifies the imputation method to be used for each column in data. If not supplied by the user, <code>method</code> defaults to convenient standard methods for single level continuous and categorical data. Since these do not take any clustering or multilevel structures into account, valid imputation of incomplete multilevel data will typically require a user-supplied methods vector. The tables 7.2, 7.3 and 7.4 in van Buuren (2018, <span class="math inline">\(\S\)</span> 7.6, <span class="math inline">\(\S\)</span> 7.7 and <span class="math inline">\(\S\)</span> 7.8, respectively) provide an overview of the available methods to perform univariate multilevel imputation. Note that that in the current version of <code>mice</code> (v. 3.16) there are no dedicated multilevel imputation methods available for discrete variables with 3 or more unordered categories.</p>
 <p>With the <code>predictorMatix</code> argument, <code>mice</code> users can define which columns should be used as predictors in each imputation model. The default predictor matrix is a square binary matrix with the variables to be imputed in the rows and the imputation model predictors in the columns. The default <code>predictorMatrix</code> will not be suitable for multilevel data. Univariate imputation methods for two-level data use other codes than <code>0</code> and <code>1</code>. In the predictor matrix, <code>-2</code> denotes the class variable, a value <code>1</code> indicates a fixed effect and a value <code>2</code> indicates a random effect. Additionally, the method <code>2l.pan</code> uses codes <code>3</code> and <code>4</code> to add class means to codes <code>1</code> and <code>2</code> respectively.</p>
 <!-- 2l.bin, 2l.lmer, 2l.norm, 2l.pan, 2lonly.mean, 2lonly.norm and 2lonly.pmm use code -2 to indicate the class variable -->
 <!-- -  2l.bin, 2l.lmer, 2l.norm and 2l.pan use code 2 to indicate the random effects -->
 <!-- -  2l.pan uses codes 3 and 4 to add class means to codes 1 and 2 respectively -->
 <p>FIMD, section 7.10</p>
 <blockquote class="blockquote">
-<p>Recipe for a level-1 target: 1. Define the most general analytic model to be applied to imputed data; 2. Select a 2l method that imputes close to the data; 3. Include all level-1 variables; 4. Include the disaggregated cluster means of all level-1 variables; 5. Include all level-1 interactions implied by the analytic model; 6. Include all level-2 predictors; 7. Include all level-2 interactions implied by the analytic model; 8. Include all cross-level interactions implied by the analytic model; 9. Include predictors related to the missingness and the target; 10. Exclude any terms involving the target</p>
+<p>Recipe for a level-1 target:</p>
 </blockquote>
 <blockquote class="blockquote">
-<p>Recipe for a level-2 target: 1. Define the most general analytic model to be applied to imputed data; 2. Select a 2lonly method that imputes close to the data; 3. Include the cluster means of all level-1 variables; 4. Include the cluster means of all level-1 interactions; 5. Include all level-2 predictors; 6. Include all interactions of level-2 variables; 7. Include predictors related to the missingness and the target; 8. Exclude any terms involving the target</p>
+<ol type="1">
+<li>Define the most general analytic model to be applied to imputed data;</li>
+<li>Select a 2l method that imputes close to the data;</li>
+<li>Include all level-1 variables;</li>
+<li>Include the disaggregated cluster means of all level-1 variables;</li>
+<li>Include all level-1 interactions implied by the analytic model;</li>
+<li>Include all level-2 predictors;</li>
+<li>Include all level-2 interactions implied by the analytic model;</li>
+<li>Include all cross-level interactions implied by the analytic model;</li>
+<li>Include predictors related to the missingness and the target;</li>
+<li>Exclude any terms involving the target</li>
+</ol>
+</blockquote>
+<blockquote class="blockquote">
+<p>Recipe for a level-2 target:</p>
+</blockquote>
+<blockquote class="blockquote">
+<ol type="1">
+<li>Define the most general analytic model to be applied to imputed data;</li>
+<li>Select a 2lonly method that imputes close to the data;</li>
+<li>Include the cluster means of all level-1 variables;</li>
+<li>Include the cluster means of all level-1 interactions;</li>
+<li>Include all level-2 predictors;</li>
+<li>Include all interactions of level-2 variables;</li>
+<li>Include predictors related to the missingness and the target;</li>
+<li>Exclude any terms involving the target</li>
+</ol>
 </blockquote>
 </section>
 <section id="case-study" class="level1">
 <h1>Case study</h1>
 <p>Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e.&nbsp;the most general analytic model to be applied to imputed data), plus an assumed missingness mechanism. This tutorial assumes M(C)AR, for MNAR see Munoz et al.</p>
+<!-- Steps in MDCE lecture -->
+<!-- 1.  MAR or MNAR -->
+<!-- 2.  Form of the imputation model -->
+<!-- 3.  Which predictors -->
+<!-- 4.  Derived variables -->
+<!-- 5.  What is $m$? -->
+<!-- 6.  Order of imputation -->
+<!-- 7.  Diagnostics, convergence -->
 <ol type="1">
 <li>Load the data, make sure the variables are correctly formatted (e.g.&nbsp;numeric clustering variable)</li>
 <li>Explore the missingness</li>
@@ -232,6 +271,13 @@ Distinguishing beteen missingness mechanisms.
 <ol start="9" type="1">
 <li>Analyze and pool</li>
 <li>If error… (e.g.&nbsp;rescale variables by converting imputations to long format, mutate, then back to mids)</li>
+<li>After successful run:</li>
+</ol>
+<ul>
+<li>Evaluate missingness ratio’s (e.g.&nbsp;fraction of missing information)</li>
+<li>If necessary, increase <span class="math inline">\(m\)</span> and re-impute</li>
+</ul>
+<ol start="10" type="1">
 <li>For further multilevel model building, AICs could be pooled, how?</li>
 </ol>
 <p>The most general analytic model to be applied to imputed data (Hox et al, 2018).</p>
@@ -243,103 +289,180 @@ Distinguishing beteen missingness mechanisms.
 <!-- u_{1j} \text{gender}_{ij} +  -->
 <p>Setup <code>R</code> environment</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mice)     <span class="co"># for imputation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'mice' was built under R version 4.3.1</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'mice'</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following object is masked from 'package:stats':
-
-    filter</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:base':
-
-    cbind, rbind</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggmice)   <span class="co"># for visualization</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'ggmice'</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:mice':
-
-    bwplot, densityplot, stripplot, xyplot</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)  <span class="co"># for visualization</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'ggplot2' was built under R version 4.3.2</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)    <span class="co"># for data manipulation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'dplyr' was built under R version 4.3.2</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'dplyr'</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:stats':
-
-    filter, lag</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:base':
-
-    intersect, setdiff, setequal, union</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)     <span class="co"># for multilevel modeling</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'lme4' was built under R version 4.3.2</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Loading required package: Matrix</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mice)         <span class="co"># for imputation</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggmice)       <span class="co"># for visualization</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)      <span class="co"># for visualization</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)        <span class="co"># for data manipulation</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)         <span class="co"># for multilevel modeling</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom)        <span class="co"># for tidying model output</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom.mixed)  <span class="co"># for tidying mixed model output</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Load the data</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"data/popular_MAR.RData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"data/popular_MAR.RData"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> popular_MAR</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Inspect the missingness</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_pattern</span>(popular_MAR)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_pattern</span>(dat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="manuscript_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Fix cluster-level missingness determinately</p>
+<p>The unit identifier and cluster identifier are observed for all cases. All other variables are incomplete. The outcome variable ‘popularity’ is missing for 799 cases. The cluster-level variable ‘teacher experience’ is missing only once. The unit-level variables ‘gender’, ‘extraversion’ and ‘teacher assessment’ are missing for 3, 344 and 275 cases, respectively. Teacher assessment is not part of the analysis model, but may serve as auxiliary variable in the imputation models. This is advisable if the observed data in the teacher assessment variable is strongly related to the observed data in the incomplete variables <em>or</em> their missingness indicators.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>meth <span class="ot">&lt;-</span> <span class="fu">make.method</span>(popular_MAR)</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>meth[<span class="st">"experience_j"</span>] <span class="ot">&lt;-</span> <span class="st">"2lonly.mean"</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>meth[meth <span class="sc">!=</span> <span class="st">"2lonly.mean"</span>] <span class="ot">&lt;-</span> <span class="st">""</span></span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">make.predictorMatrix</span>(popular_MAR)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>pred[, <span class="st">"cluster_id"</span>] <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">2</span></span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>imp <span class="ot">&lt;-</span> <span class="fu">mice</span>(</span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  popular_MAR, </span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">m =</span> <span class="dv">1</span>, </span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> meth, </span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">predictorMatrix =</span> pred,</span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">maxit =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_corr</span>(dat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="manuscript_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_flux</span>(dat, <span class="at">label =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="manuscript_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The auxiliary variable ‘teacher assessment’ may be useful in the imputation for the incomplete outcome variable ‘popularity’. The unit identifier is not relevant, and will be left out of the imputation models.</p>
+<section id="complete-case-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="complete-case-analysis">Complete case analysis</h2>
+<p>Before we start imputing the incomplete data, we can fit a complete case model to the observed data. This will give us a baseline for comparison with the imputed data.</p>
+<p>Single-level model</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> <span class="dv">1</span>, </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 5
+  term        estimate std.error statistic p.value
+  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+1 (Intercept)     5.03    0.0396      127.       0</code></pre>
+</div>
+</div>
+<p>M0: intercept-only model</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> (<span class="dv">1</span> <span class="sc">|</span> cluster_id), </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat, </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 6
+  effect   group      term            estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)        5.02     0.0891      56.4
+2 ran_pars cluster_id sd__(Intercept)    0.831   NA           NA  
+3 ran_pars Residual   sd__Observation    1.09    NA           NA  </code></pre>
+</div>
+</div>
+<p>M1: model with explanatory variables</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cluster_id), </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat, </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 6
+  effect   group      term            estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)      -0.391    0.198       -1.98
+2 fixed    &lt;NA&gt;       gender_ij         1.29     0.0482      26.8 
+3 fixed    &lt;NA&gt;       extraversion_ij   0.445    0.0216      20.6 
+4 fixed    &lt;NA&gt;       experience_j      0.0835   0.00857      9.75
+5 ran_pars cluster_id sd__(Intercept)   0.518   NA           NA   
+6 ran_pars Residual   sd__Observation   0.765   NA           NA   </code></pre>
+</div>
+</div>
+<p>M1A: model with explanatory variables, extraversion slope random</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">1</span>  <span class="sc">+</span> extraversion_ij <span class="sc">|</span> cluster_id), </span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat, </span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 8 × 6
+  effect   group      term                          estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;                            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)                    -0.340    0.222       -1.53
+2 fixed    &lt;NA&gt;       gender_ij                       1.28     0.0477      26.9 
+3 fixed    &lt;NA&gt;       extraversion_ij                 0.438    0.0282      15.5 
+4 fixed    &lt;NA&gt;       experience_j                    0.0804   0.00843      9.54
+5 ran_pars cluster_id sd__(Intercept)                 1.15    NA           NA   
+6 ran_pars cluster_id cor__(Intercept).extraversio…  -0.903   NA           NA   
+7 ran_pars cluster_id sd__extraversion_ij             0.177   NA           NA   
+8 ran_pars Residual   sd__Observation                 0.742   NA           NA   </code></pre>
+</div>
+</div>
+<p>M0: model with with cross-level interaction</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    extraversion_ij<span class="sc">:</span>experience_j <span class="sc">+</span> (<span class="dv">1</span>  <span class="sc">+</span> extraversion_ij <span class="sc">|</span> cluster_id), </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat, </span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00729487 (tol = 0.002, component 1)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 9 × 6
+  effect   group      term                          estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;                            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)                    -2.22     0.309       -7.18
+2 fixed    &lt;NA&gt;       gender_ij                       1.27     0.0470      27.0 
+3 fixed    &lt;NA&gt;       extraversion_ij                 0.770    0.0461      16.7 
+4 fixed    &lt;NA&gt;       experience_j                    0.211    0.0187      11.3 
+5 fixed    &lt;NA&gt;       extraversion_ij:experience_j   -0.0233   0.00295     -7.91
+6 ran_pars cluster_id sd__(Intercept)                 0.593   NA           NA   
+7 ran_pars cluster_id cor__(Intercept).extraversio…  -0.746   NA           NA   
+8 ran_pars cluster_id sd__extraversion_ij             0.0217  NA           NA   
+9 ran_pars Residual   sd__Observation                 0.744   NA           NA   </code></pre>
+</div>
+</div>
+<p>The last model does not converge. This is likely due to the missingness in the data. We will now impute the incomplete data and re-fit the models.</p>
+</section>
+<section id="imputation" class="level2">
+<h2 class="anchored" data-anchor-id="imputation">Imputation</h2>
+</section>
+<section id="sandbox" class="level2">
+<h2 class="anchored" data-anchor-id="sandbox">Sandbox</h2>
+<p>Fix cluster-level missingness determinately.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>meth <span class="ot">&lt;-</span> <span class="fu">make.method</span>(dat)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>meth[<span class="st">"experience_j"</span>] <span class="ot">&lt;-</span> <span class="st">"2lonly.mean"</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>meth[meth <span class="sc">!=</span> <span class="st">"2lonly.mean"</span>] <span class="ot">&lt;-</span> <span class="st">""</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">make.predictorMatrix</span>(dat)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>pred[] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>pred[, <span class="st">"cluster_id"</span>] <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">2</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>imp <span class="ot">&lt;-</span> <span class="fu">mice</span>(</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  popular_MAR, </span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">m =</span> <span class="dv">1</span>, </span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> meth, </span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">predictorMatrix =</span> pred,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">maxit =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
  iter imp variable
   1   1  experience_j</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_pattern</span>(<span class="fu">complete</span>(imp))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_pattern</span>(<span class="fu">complete</span>(imp))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="manuscript_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+<p><img src="manuscript_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>This procedure has fixed the missing experience value</p>
 <p>Does not work if there are inconsistencies within clusters! But we can do this manually.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>popular_MAR <span class="sc">|&gt;</span></span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(cluster_id) <span class="sc">|&gt;</span></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reframe</span>(<span class="at">teacher_experience =</span> <span class="fu">unique</span>(experience_j))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>dat <span class="sc">|&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(cluster_id) <span class="sc">|&gt;</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reframe</span>(<span class="at">teacher_experience =</span> <span class="fu">unique</span>(experience_j))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 102 × 2
    cluster_id teacher_experience
@@ -359,20 +482,42 @@ Attaching package: 'dplyr'</code></pre>
 </div>
 <p>This shows us that in the first cluster teacher experience of 4 and 24 is recorded.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>popular_MAR <span class="sc">|&gt;</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(cluster_id <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(experience_j)) <span class="sc">+</span> <span class="fu">geom_histogram</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>dat <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(cluster_id <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(experience_j)) <span class="sc">+</span> <span class="fu">geom_histogram</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 1 rows containing non-finite values (`stat_bin()`).</code></pre>
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
+(`stat_bin()`).</code></pre>
 </div>
 <div class="cell-output-display">
-<p><img src="manuscript_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+<p><img src="manuscript_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>For most pupils, teacher experience is 24. We can quite safely assume that the teacher expeience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24.</p>
+<p>For most pupils, teacher experience is 24. We can quite safely assume that the teacher experience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24. The following line of code sets the teacher experience of 4 manually as missing.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>dat[dat<span class="sc">$</span>cluster_id <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;</span> (<span class="fu">is.na</span>(dat<span class="sc">$</span>experience_j) <span class="sc">|</span> dat<span class="sc">$</span>experience_j <span class="sc">==</span> <span class="dv">4</span>), <span class="st">"experience_j"</span>] <span class="ot">&lt;-</span> <span class="cn">NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>imp <span class="ot">&lt;-</span> <span class="fu">mice</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  popular_MAR, </span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">m =</span> <span class="dv">1</span>, </span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> meth, </span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">predictorMatrix =</span> pred,</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">maxit =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+ iter imp variable
+  1   1  experience_j</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_pattern</span>(<span class="fu">complete</span>(imp))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="manuscript_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
 </section>
 <section id="references" class="level1">
 <h1>References</h1>
