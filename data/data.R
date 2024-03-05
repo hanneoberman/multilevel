@@ -30,8 +30,8 @@ popular <- zap_label(popular)
 # reorder columns, drop unused ones
 popular <- popular[, c("unit_id", "cluster_id", "popularity_ij", "gender_ij", "extraversion_ij", "experience_j", "assessment_ij")]
 
-# create 'data entry error'
-popular[1, "experience_j"] <- 4
+# # create 'data entry error'
+# popular[1, "experience_j"] <- 4
 
 # visualize outcome per cluster
 ggplot(popular, aes(popularity_ij, color = as.factor(cluster_id))) + 

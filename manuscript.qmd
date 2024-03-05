@@ -6,15 +6,6 @@ format:
     toc: true
 ---
 
-```{scss, eval=FALSE}
-div {
-  &.img {
-    out-width: 100%;
-    height: auto;
-  }
-}
-```
-
 <!-- This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation. -->
 
 # Introduction
@@ -350,7 +341,6 @@ Imputation model predictors are specified with the `predictorMatrix` argument in
 
 ```{r}
 pred <- make.predictorMatrix(dat)
-pred[] <- 0
 ```
 
 The cluster identifier `cluster_id` will serve as clustering variable for all imputation models, whereas the unit identifier will not be part of any imputation model.
@@ -380,53 +370,38 @@ There are no unit-level interactions in the analytic model, so we will continue 
 pred["popularity_ij", "experience_j"] <- 1
 ```
 
-There are no cluster-level interactions required either, but there is a cross-level interaction implied by the analytic model. We will use passive imputation to impute the interaction effect for extraversion and experience. This requires a differentiation between the cluster means of extraversion and each unit's deviation from the cluster mean.
+There are no cluster-level interactions required either, but there is a cross-level interaction implied by the analytic model. We will use passive imputation to impute the interaction effect for extraversion and experience. This is done by adding an empty column to the data for the interaction term and letting `mice` calculate the interaction effect on the fly. 
 
-We add an empty column to the data for the cluster means of extraversion and inform `mice` to impute this variable on the fly as the cluster mean using the `miceadds` method `2l.groupmean`. 
-```{r}
-dat$extraversion_m <- NA
-meth["extraversion_m"] <-  "2l.groupmean"
-```
-
-We add an empty column to the data for the unit-level deviations of extraversion and let `mice` derive the deviations from the cluster mean by means of passive imputation.
-```{r}
-dat$extraversion_d <- NA
-meth["extraversion_d"] <- "~ I(extraversion_ij - extraversion_m)"
-```
-
-Now we may include the interaction term to the data and methods vector. 
 ```{r}
 dat$extraversion_experience <- NA
-meth["extraversion_experience"] <- "~ I(extraversion_d * experience_j)"
 ```
 
-Now, let's add these three additional variables to the predictor matrix and add the cluster identifier as predictor for these variables.
+We need to edit the methods vector to accommodate this additional variable. Set the imputation method for the interaction term to passive imputation.
 ```{r}
-pred <- rbind(
-  pred, 
-  extraversion_m = 0, 
-  extraversion_d = 0, 
-  extraversion_experience = 0
-  )
-pred <- cbind(
-  pred, 
-  extraversion_m = 0, 
-  extraversion_d = 0, 
-  extraversion_experience = 0
-  )
-pred[, "cluster_id"] <- -2
-# pred["extraversion_m", "extraversion_ij"] <- 1
+meth["extraversion_experience"] <- "~ I(extraversion_ij * experience_j)"
 ```
 
-Edit the predictor matrix so the interaction term is included in the imputation model for 'popularity'.
+Add the additional variable to the predictor matrix as well.
+```{r}
+pred <- rbind(pred, extraversion_experience = 0)
+pred <- cbind(pred, extraversion_experience = 0)
+```
+
+Further edit the predictor matrix so the interaction term is included in the imputation model for 'popularity'.
 ```{r}
 pred["popularity_ij", "extraversion_experience"] <- 1
 ```
 
-Finally, include a predictor related to the missingness and the target: the auxiliary variable teacher assessment. 
+And finally, include a predictor related to the missingness and the target: the auxiliary variable teacher assessment. 
 ```{r}
 pred["popularity_ij", "assessment_ij"] <- 1
 ```
+
+The imputation model predictors for popularity now are as follows.
+```{r}
+pred["popularity_ij", ]
+```
+
 
 #### Gender
 
@@ -504,22 +479,94 @@ imp <- mice(
   printFlag = FALSE)
 ```
 
-This code runs! Evaluate the logged events.
+This code runs! Add iterations and evaluate convergence.
 ```{r}
-imp$loggedEvents
-```
-
-Apparently, the extraversion cluster means...
-```{r}
-imp <- mice.mids(imp, maxit = 9)
-plot_pattern(complete(imp))
-```
-
-The imputation process has been successful. We can now evaluate the imputations and pool the results for further analysis.
-
-```{r}
+imp <- mice.mids(imp, maxit = 9, printFlag = FALSE)
 plot_trace(imp)
 ```
+
+The trace plots for teacher experience and gender do not exhibit the typical characteristics of convergence: the lines do not intermingle nicely, and thus require further inspection. The traceplot of the interaction term also requires further inspection, as there appears to be some non-stationarity in the standard deviation of the imputations. We will append some extra iterations to evaluate the potential upward trend.
+
+```{r}
+imp <- mice.mids(imp, maxit = 10, printFlag = FALSE)
+plot_trace(imp)
+```
+
+After 20 iterations, there is no apparent trending visible in the trace plots. We will first evaluate the imputations of the variables with atypical trace plots.
+
+```{r}
+ggmice(imp, aes(.imp, experience_j)) + 
+  geom_jitter(height = 0)
+```
+
+This graphs shows that there is only one imputed value and no variability between the imputations, which explains the atypical trace plots for this variable. 
+
+```{r}
+ggmice(imp, aes(.imp, gender_ij)) + 
+  geom_jitter(height = 0)
+```
+
+Equivalently, for gender, there is no variability in the imputed values. This leaves no more apparent issues with convergence. We can now evaluate the imputations of the other variables. 
+
+#### Popularity
+
+```{r}
+ggmice(imp, aes(.imp, popularity_ij)) + 
+  geom_jitter(height = 0)
+```
+
+There is one imputed value clearly outside of the range of observed values.
+```{r}
+range(mice::complete(imp)$popularity_ij)
+```
+
+If a negative value for popularity is impossible, one might decide to re-impute the data using a different imputation method. For our analyses, a negative value falls outside the range of observations, but does not require re-imputation. 
+
+```{r}
+ggmice(imp, aes(popularity_ij, group = .imp)) + 
+  geom_density()
+```
+
+#### Extraversion
+
+```{r}
+ggmice(imp, aes(.imp, extraversion_ij)) + 
+  geom_jitter(height = 0)
+```
+
+```{r}
+ggmice(imp, aes(extraversion_ij, group = .imp)) + 
+  geom_density()
+```
+
+#### Teacher assessment
+
+```{r}
+ggmice(imp, aes(.imp, assessment_ij)) + 
+  geom_jitter(height = 0)
+```
+
+```{r}
+ggmice(imp, aes(assessment_ij, group = .imp)) + 
+  geom_density()
+```
+
+#### Interaction term
+
+
+```{r}
+ggmice(imp, aes(.imp, extraversion_experience)) + 
+  geom_jitter(height = 0)
+```
+
+```{r}
+ggmice(imp, aes(extraversion_experience, group = .imp)) + 
+  geom_density()
+```
+
+### Analysis
+
+After successful imputation, we can analyze the imputed data and pool the results for further analysis.
 
 
 
