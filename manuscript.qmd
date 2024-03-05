@@ -6,6 +6,15 @@ format:
     toc: true
 ---
 
+```{scss, eval=FALSE}
+div {
+  &.img {
+    out-width: 100%;
+    height: auto;
+  }
+}
+```
+
 <!-- This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation. -->
 
 # Introduction
@@ -78,7 +87,9 @@ The number of imputations `m` should be determined based on the severity of the 
 
 The `method` argument specifies the imputation method to be used for each column in data. If not supplied by the user, `method` defaults to convenient standard methods for single level continuous and categorical data. Since these do not take any clustering or multilevel structures into account, valid imputation of incomplete multilevel data will typically require a user-supplied methods vector. The tables 7.2, 7.3 and 7.4 in van Buuren (2018, $\S$ 7.6, $\S$ 7.7 and $\S$ 7.8, respectively) provide an overview of the available methods to perform univariate multilevel imputation. Note that that in the current version of `mice` (v. 3.16) there are no dedicated multilevel imputation methods available for discrete variables with 3 or more unordered categories.
 
-With the `predictorMatix` argument, `mice` users can define which columns should be used as predictors in each imputation model. The default predictor matrix is a square binary matrix with the variables to be imputed in the rows and the imputation model predictors in the columns. The default `predictorMatrix` will not be suitable for multilevel data. Univariate imputation methods for two-level data use other codes than `0` and `1`. In the predictor matrix, `-2` denotes the class variable, a value `1` indicates a fixed effect and a value `2` indicates a random effect. Additionally, the method `2l.pan` uses codes `3` and `4` to add class means to codes `1` and `2` respectively.
+With the `predictorMatix` argument, `mice` users can define which columns should be used as predictors in each imputation model. The default predictor matrix is a square binary matrix with the variables to be imputed in the rows and the imputation model predictors in the columns. The default `predictorMatrix` will not be suitable for multilevel data. Univariate imputation methods for two-level data use other codes than `0` and `1`. In the predictor matrix, `-2` denotes the cluster variable, a value `1` indicates a fixed effect and a value `2` indicates a random effect. An entry of `3` or `4` indicates that the cluster means of the covariates are added as a predictor to the imputation model with fixed or random effects, respectively. 
+
+<!-- Additionally, the method `2l.pan` uses codes `3` and `4` to add class means to codes `1` and `2` respectively. -->
 
 <!-- 2l.bin, 2l.lmer, 2l.norm, 2l.pan, 2lonly.mean, 2lonly.norm and 2lonly.pmm use code -2 to indicate the class variable --> 
 <!-- -	2l.bin, 2l.lmer, 2l.norm and 2l.pan use code 2 to indicate the random effects -->
@@ -148,12 +159,13 @@ The most general analytic model to be applied to imputed data (Hox et al, 2018, 
 Setup `R` environment
 ```{r, message=FALSE, warning=FALSE}
 library(mice)         # for imputation
+library(miceadds)     # for imputation
 library(ggmice)       # for visualization
 library(ggplot2)      # for visualization
-library(dplyr)        # for data manipulation
+library(dplyr)        # for data wrangling
 library(lme4)         # for multilevel modeling
 library(broom)        # for tidying model output
-library(broom.mixed)  # for tidying mixed model output
+library(broom.mixed)  # for tidying model output
 ```
 
 
@@ -163,19 +175,22 @@ load("data/popular_MAR.RData")
 dat <- popular_MAR
 ```
 
-Inspect the missingness
+Inspect the missingness.
 ```{r}
-plot_pattern(dat)
+plot_pattern(dat, square = FALSE)
 ```
 
-The unit identifier and cluster identifier are observed for all cases. All other variables are incomplete. The outcome variable 'popularity' is missing for `r sum(is.na(dat$popularity_ij))` cases. The cluster-level variable 'teacher experience' is missing only once. The unit-level variables 'gender', 'extraversion' and 'teacher assessment' are missing for `r sum(is.na(dat$gender_ij))`, `r sum(is.na(dat$extraversion_ij))` and `r sum(is.na(dat$assessment_ij))` cases, respectively. Teacher assessment is not part of the analysis model, but may serve as auxiliary variable in the imputation models. This is advisable if the observed data in the teacher assessment variable is strongly related to the observed data in the incomplete variables *or* their missingness indicators.  
+The unit identifier and cluster identifier are observed for all cases. All other variables are incomplete. The outcome variable 'popularity' is missing for `r sum(is.na(dat$popularity_ij))` cases. The cluster-level variable 'teacher experience' is missing only once. The unit-level variables 'gender', 'extraversion' and 'teacher assessment' are missing for `r sum(is.na(dat$gender_ij))`, `r sum(is.na(dat$extraversion_ij))` and `r sum(is.na(dat$assessment_ij))` cases, respectively. 
+
+Teacher assessment is not part of the analysis model, but may serve as auxiliary variable in the imputation models. This is advisable if the observed data in the teacher assessment variable is strongly related to the observed data in the incomplete variables *or* their missingness indicators (see below).  
 
 ```{r}
-plot_corr(dat)
+plot_corr(dat, square = FALSE)
 plot_flux(dat, label = FALSE)
 ```
 
 The auxiliary variable 'teacher assessment' may be useful in the imputation for the incomplete outcome variable 'popularity'. The unit identifier is not relevant, and will be left out of the imputation models.
+
 
 ## Complete case analysis
 
@@ -234,9 +249,23 @@ tidy(fit)
 
 The last model does not converge. This is likely due to the missingness in the data. We will now impute the incomplete data and re-fit the models.
 
-## Imputation
+
+
+## Imputation model building
 
 For each incomplete variable we need to define an imputation model: 1) choose the functional form of the imputation model and 2) select the imputation model predictors. 
+
+### Imputation methods
+
+Create the default methods vector, to be filled in with the appropriate imputation methods. 
+```{r}
+meth <- make.method(dat)
+meth
+```
+
+The complete identifier variables do not have to be imputed. The default imputation methods for the incomplete variables are not appropriate because of the multilevel structure of the data. We will fill in the methods vector with more appropriate imputation methods, based on the distribution of the incomplete variables. 
+
+The outcome variable 'popularity' is approximately normally distributed. 
 
 ```{r}
 ggmice(dat, aes(popularity_ij)) + 
@@ -250,40 +279,268 @@ ggmice(dat, aes(popularity_ij, group = cluster_id)) +
   geom_density()
 ```
 
-We can use `2l.norm`: a multilevel method using the linear mixed model with heterogeneous error variances. The unit-level predictor variable 'gender' is dichotomous. 
+We can use `2l.norm`: a multilevel method using the linear mixed model with heterogeneous error variances. 
+
+```{r}
+meth["popularity_ij"] <- "2l.norm"
+```
+
+
+The unit-level predictor variable 'gender' is dichotomous. 
 ```{r}
 ggmice(dat, aes(as.factor(gender_ij))) + 
   geom_bar(position = "stack", fill = "white")
 ```
 
-We can use `2l.bin` to impute the missing values. The unit-level predictor variable 'extraversion' is approximately normally distributed, but not truly continuous. 
+We can use `2l.bin` to impute the missing values. 
+
+```{r}
+meth["gender_ij"] <- "2l.bin"
+```
+
+The unit-level predictor variable 'extraversion' is approximately normally distributed, but not truly continuous. 
 ```{r}
 ggmice(dat, aes(extraversion_ij)) + 
   geom_histogram(fill = "white")
 ```
 
-We can use `2l.pmm` to impute the missing values. The unit-level auxiliary variable 'teacher assessment' is approximately normally distributed but not continuous either. We will use `2l.pmm` for this variable too.
+We can use `2l.pmm` to impute the missing values. 
+
+```{r}
+meth["extraversion_ij"] <- "2l.pmm"
+```
+
+The unit-level auxiliary variable 'teacher assessment' is approximately normally distributed but not continuous either. 
 
 ```{r}
 ggmice(dat, aes(assessment_ij)) + 
   geom_histogram(fill = "white")
 ```
+We will use `2l.pmm` for this variable too.
 
-The cluster-level variable 'teacher experience' is continuous. We can use `2lonly.mean` to impute the missing values if we are sufficiently certain that this variable... Otherwise, `2lonly.pmm` is a good alternative.
+```{r}
+meth["assessment_ij"] <- "2l.pmm"
+```
+
+The cluster-level variable 'teacher experience' is continuous. 
 
 ```{r} 
 ggmice(dat, aes(experience_j)) + 
   geom_histogram(fill = "white")
 ```
 
+We can use `2lonly.mean` to impute the missing values if we are sufficiently certain that this variable... Otherwise, `2lonly.pmm` is a good alternative.
+
+```{r}
+meth["experience_j"] <- "2lonly.pmm"
+```
+
+Re-evaluate the methods vector
+
+```{r}
+meth
+```
+
+All incomplete variable have a multilevel imputation method.
+
+
+### Imputation model predictors
+
+Imputation model predictors are specified with the `predictorMatrix` argument in `mice`. The default predictor matrix is not appropriate for multilevel imputation models.
+
+```{r}
+pred <- make.predictorMatrix(dat)
+pred[] <- 0
+```
+
+The cluster identifier `cluster_id` will serve as clustering variable for all imputation models, whereas the unit identifier will not be part of any imputation model.
+
+```{r}
+pred[, "cluster_id"] <- -2
+pred[, "unit_id"] <- 0
+```
+
+#### Popularity
+
+For the outcome variable 'popularity', we will include all unit-level variables that appear in the most general analytic model to be applied to imputed data. We will include a fixed effect for 'gender` and a random effect for 'extraversion'. 
+
+```{r}
+pred["popularity_ij", "gender_ij"] <- 1
+pred["popularity_ij", "extraversion_ij"] <- 2
+```
+
+The next step is to include the disaggregated cluster means of all level-1 variables, which means we have to edit the predictor matrix.
+```{r}
+pred["popularity_ij", "gender_ij"] <- 3
+pred["popularity_ij", "extraversion_ij"] <- 4
+```
+
+There are no unit-level interactions in the analytic model, so we will continue to the next step: include all level-2 predictors.
+```{r}
+pred["popularity_ij", "experience_j"] <- 1
+```
+
+There are no cluster-level interactions required either, but there is a cross-level interaction implied by the analytic model. We will use passive imputation to impute the interaction effect for extraversion and experience. This requires a differentiation between the cluster means of extraversion and each unit's deviation from the cluster mean.
+
+We add an empty column to the data for the cluster means of extraversion and inform `mice` to impute this variable on the fly as the cluster mean using the `miceadds` method `2l.groupmean`. 
+```{r}
+dat$extraversion_m <- NA
+meth["extraversion_m"] <-  "2l.groupmean"
+```
+
+We add an empty column to the data for the unit-level deviations of extraversion and let `mice` derive the deviations from the cluster mean by means of passive imputation.
+```{r}
+dat$extraversion_d <- NA
+meth["extraversion_d"] <- "~ I(extraversion_ij - extraversion_m)"
+```
+
+Now we may include the interaction term to the data and methods vector. 
+```{r}
+dat$extraversion_experience <- NA
+meth["extraversion_experience"] <- "~ I(extraversion_d * experience_j)"
+```
+
+Now, let's add these three additional variables to the predictor matrix and add the cluster identifier as predictor for these variables.
+```{r}
+pred <- rbind(
+  pred, 
+  extraversion_m = 0, 
+  extraversion_d = 0, 
+  extraversion_experience = 0
+  )
+pred <- cbind(
+  pred, 
+  extraversion_m = 0, 
+  extraversion_d = 0, 
+  extraversion_experience = 0
+  )
+pred[, "cluster_id"] <- -2
+# pred["extraversion_m", "extraversion_ij"] <- 1
+```
+
+Edit the predictor matrix so the interaction term is included in the imputation model for 'popularity'.
+```{r}
+pred["popularity_ij", "extraversion_experience"] <- 1
+```
+
+Finally, include a predictor related to the missingness and the target: the auxiliary variable teacher assessment. 
+```{r}
+pred["popularity_ij", "assessment_ij"] <- 1
+```
+
+#### Gender
+
+The analytic model implies a relation between gender and popularity. So we need to include the outcome variable in the imputation model.
+
+```{r}
+pred["gender_ij", "popularity_ij"] <- 1
+```
+
+
+#### Extraversion
+
+The analytic model implies a relation between gender and popularity. So we need to include the outcome variable in the imputation model.
+
+```{r}
+pred["extraversion_ij", "popularity_ij"] <- 1
+```
+
+#### Experience
+
+The analytic model implies a relation between the cluster-level variable teacher experience and the unit-level variable popularity.
+
+```{r}
+pred["experience_j", "popularity_ij"] <- 1
+```
+
+
+#### Teacher assessment
+
+The analytic model does not imply any relation with teacher assessment. This variable is only used as auxiliary variable.
+```{r}
+pred["assessment_ij", "popularity_ij"] <- 1
+```
+
+Finally, clean up the predictor matrix by setting the diagonal to `0`, to exclude any terms involving the target.
+```{r}
+diag(pred) <- 0
+```
+
+Our final predictor matrix can be visualized as follows.
+```{r}
+plot_pred(pred, meth = meth)
+```
+
+Impute the data
+```{r, eval=FALSE}
+imp <- mice(
+  dat, 
+  m = 1, 
+  method = meth, 
+  predictorMatrix = pred,
+  maxit = 1)
+```
+
+
+Does not run. Set imputation method for experience to `2lonly.mean` and re-run.
+```{r}
+meth["experience_j"] <- "2lonly.mean"
+imp <- mice(
+  dat, 
+  method = meth, 
+  predictorMatrix = pred,
+  maxit = 1,
+  printFlag = FALSE)
+```
+
+This solves the issue in imputing teacher experience. Now edit the method for gender.
+```{r}
+meth["gender_ij"] <- "2l.pmm"
+imp <- mice(
+  dat, 
+  method = meth, 
+  predictorMatrix = pred,
+  maxit = 1,
+  printFlag = FALSE)
+```
+
+This code runs! Evaluate the logged events.
+```{r}
+imp$loggedEvents
+```
+
+Apparently, the extraversion cluster means...
+```{r}
+imp <- mice.mids(imp, maxit = 9)
+plot_pattern(complete(imp))
+```
+
+The imputation process has been successful. We can now evaluate the imputations and pool the results for further analysis.
+
+```{r}
+plot_trace(imp)
+```
 
 
 
+
+<!-- 1.	Define the most general analytic model to be applied to imputed data; -->
+<!-- 2.	Select a 2l method that imputes close to the data; -->
+<!-- 3.	Include all level-1 variables; -->
+<!-- 4.	Include the disaggregated cluster means of all level-1 variables; -->
+<!-- 5.	Include all level-1 interactions implied by the analytic model; -->
+<!-- 6.	Include all level-2 predictors; -->
+<!-- 7.	Include all level-2 interactions implied by the analytic model; -->
+<!-- 8.	Include all cross-level interactions implied by the analytic model; -->
+<!-- 9.	Include predictors related to the missingness and the target; -->
+<!-- 10.	Exclude any terms involving the target -->
 
 <!-- 1. Include all variables that appear in the analysis model, including transformation, interactions and outcomes -->
 <!-- 2. Include all variables that are related to the nonresponse -->
 <!-- 3. Include all variables that explain a considerable amount of variance -->
 <!-- 4. Remove variables that have too many missing values within the subgroup of incomplete cases -->
+
+
 
 ---
 
@@ -291,19 +548,19 @@ ggmice(dat, aes(experience_j)) +
 
 Fix cluster-level missingness determinately.
 ```{r}
-meth <- make.method(dat)
-meth["experience_j"] <- "2lonly.mean"
-meth[meth != "2lonly.mean"] <- ""
-pred <- make.predictorMatrix(dat)
-pred[] <- 0
-pred[, "cluster_id"] <- -2
-imp <- mice(
-  popular_MAR, 
-  m = 1, 
-  method = meth, 
-  predictorMatrix = pred,
-  maxit = 1)
-plot_pattern(complete(imp))
+# meth <- make.method(dat)
+# meth["experience_j"] <- "2lonly.mean"
+# meth[meth != "2lonly.mean"] <- ""
+# pred <- make.predictorMatrix(dat)
+# pred[] <- 0
+# pred[, "cluster_id"] <- -2
+# imp <- mice(
+#   popular_MAR, 
+#   m = 1, 
+#   method = meth, 
+#   predictorMatrix = pred,
+#   maxit = 1)
+# plot_pattern(complete(imp))
 ```
 
 This procedure has fixed the missing experience value 
@@ -311,33 +568,33 @@ This procedure has fixed the missing experience value
 Does not work if there are inconsistencies within clusters! But we can do this manually.
 
 ```{r}
-dat |>
-  group_by(cluster_id) |>
-  reframe(teacher_experience = unique(experience_j))
+# dat |>
+#   group_by(cluster_id) |>
+#   reframe(teacher_experience = unique(experience_j))
 ```
 
 This shows us that in the first cluster teacher experience of 4 and 24 is recorded.
 
 ```{r}
-dat |>
-  filter(cluster_id == 1) |>
-  ggplot(aes(experience_j)) + geom_histogram()
+# dat |>
+#   filter(cluster_id == 1) |>
+#   ggplot(aes(experience_j)) + geom_histogram()
 ```
 
 For most pupils, teacher experience is 24. We can quite safely assume that the teacher experience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24. The following line of code sets the teacher experience of 4 manually as missing.
 
 ```{r}
-dat[dat$cluster_id == 1 & (is.na(dat$experience_j) | dat$experience_j == 4), "experience_j"] <- NA
+# dat[dat$cluster_id == 1 & (is.na(dat$experience_j) | dat$experience_j == 4), "experience_j"] <- NA
 ```
 
 ```{r}
-imp <- mice(
-  popular_MAR, 
-  m = 1, 
-  method = meth, 
-  predictorMatrix = pred,
-  maxit = 1)
-plot_pattern(complete(imp))
+# imp <- mice(
+#   popular_MAR, 
+#   m = 1, 
+#   method = meth, 
+#   predictorMatrix = pred,
+#   maxit = 1)
+# plot_pattern(complete(imp))
 ```
 
 
