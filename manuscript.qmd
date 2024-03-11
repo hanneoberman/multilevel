@@ -54,13 +54,48 @@ It becomes problematic when people aim to infer mechanisms from the data itself.
 Alternatively, we could argue the same for MCAR. The inability to distinguish both MAR and MCAR from MNAR based on the data alone, renders the many MCAR tests that are available in software futile. 
 :::
 
-1. missing data occur often in data with human subjects
-2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest
-3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques
-4. if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data
-4. both missingness and multilevel structures require advanced statistical techniques
-5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data
-6. we illustrate the use of the software by means of a case study
+# Introduction to `mice`
+Package `mice` in [R]{.proglang} is a powerful tool for imputing missing data. It is a flexible and easy-to-use package that can handle different types of missing data, including monotone missing data, non-monotone missing data, and missing data in time series. The package is also capable of handling missing data in both continuous and categorical variables.
+
+The `mice` package is based on the concept of multiple imputation, which is a statistical technique that involves creating multiple imputed datasets, analyzing each dataset separately, and then combining the results to obtain a single set of estimates. This approach has been shown to be more accurate and reliable than other imputation methods, such as mean imputation or listwise deletion and can be seen as a quick approximation of a full Bayesian solution. 
+
+The `mice` package is widely used in a variety of fields, including social science, epidemiology, and public health, and is an essential tool for researchers who need to analyze datasets with missing data. `mice` has become the de facto standard for multiple imputation in [R]{.proglang} and is widely used in both academia and industry with over 1 million downloads every year from CRAN. 
+
+# Imputation
+The `mice` algorithm is an algorithm to generate multiple imputations by chained equations. 
+
+::: {.callout-note}
+## Why multiple imputations?
+With imputation, some estimation procedure is used to impute (fill in) each missing datum, resulting in a completed dataset that can be analyzed as if the data were completely observed.
+We can do this once (single imputation) or multiple times (multiple imputation). 
+
+With multiple imputation, each missing datum is imputed $m \geq 2$ times, resulting in $m$ completed datasets. The $m$ completed datasets are then analyzed separately, and the results are combined to yield valid statistical inference.
+
+Multiple imputation (Rubin, 1987) has some benefits over single imputation:
+
+- it accounts for missing data uncertainty
+- it accounts for parameter uncertainty
+- can yield valid inference without additional adjustments 
+
+## Analysis of imputed data
+After the imputation process is complete, the imputed datasets can be analyzed using standard statistical methods. Van Buuren (2020) provides the following schematic overview of the multiple imputation data analysis pipeline.
+
+![](https://stefvanbuuren.name/fimd/fig/ch01-miflow-1.png){width=80%}
+:::
+
+The `mice` algorithm was initially designed as a fully conditional specification (FCS) algorithm, which is a type of imputation algorithm that imputes each variable separately, one-by-one, conditional on all other variables in the dataset. The FCS algorithm is based on the idea that imputing each variable separately allows for more flexibility than imputing all variables simultaneously. The rationale behind this thought is that in `mice`, each incomplete feature in the data can be addressed by a separate imputation model, which can be tailored to the specific characteristics of the feature. An efficient sufficient set of predictors can be chosen for each model, to further optimize the imputation process. 
+
+Sometimes, however, it is not desirable to adopt the chained equations approach to imputation. For example, if multiple features in the data obey a specific deterministic relation, then parts of the data should be jointly imputed, instead of separately. Otherwise, the interdepency of features is ignored by the imputation model, which renders the imputation procedure uncongenial with respect to the analysis. To accommodate this, the `mice` has since deviated from a strictly variable-by-variable architecture and allows for the flexible joint imputation of (blocks of) features. This hybrid approach - where the imputer can assign blocks of features to be jointly imputed, next to other features still being imputed on a variable-by-variable basis - greatly enhances the practical applicability of the `mice` algorithm. If desired, `mice` can serve as fully joint imputation method, by specifying the imputation model to be a multivariate model and all features to be imputed as a single joint block.
+
+That said, it is time to get our hands dirty and delve in the practical imputation of incomplete multilevel data with `mice`.
+
+<!-- 1. missing data occur often in data with human subjects -->
+<!-- 2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest -->
+<!-- 3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques -->
+<!-- 4. if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data -->
+<!-- 4. both missingness and multilevel structures require advanced statistical techniques -->
+<!-- 5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data -->
+<!-- 6. we illustrate the use of the software by means of a case study -->
 
 # Methods
 
