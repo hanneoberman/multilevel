@@ -332,7 +332,7 @@ Re-evaluate the methods vector
 meth
 ```
 
-All incomplete variable have a multilevel imputation method.
+All incomplete variables have a multilevel imputation method.
 
 
 ### Imputation model predictors
@@ -564,87 +564,150 @@ ggmice(imp, aes(extraversion_experience, group = .imp)) +
   geom_density()
 ```
 
+# Visualize
+
+```{r}
+ggmice(imp, aes(y = popularity_ij, x = extraversion_ij, group = cluster_id)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(color = "grey", method = "lm", se = FALSE, alpha = 0.1) +
+  geom_smooth(aes(group = NULL), color = "black", method = "lm", se = FALSE, alpha = 0.1)
+```
+
+
 ### Analysis
 
 After successful imputation, we can analyze the imputed data and pool the results for further analysis.
 
+#### Single-level model
 
-
-
-<!-- 1.	Define the most general analytic model to be applied to imputed data; -->
-<!-- 2.	Select a 2l method that imputes close to the data; -->
-<!-- 3.	Include all level-1 variables; -->
-<!-- 4.	Include the disaggregated cluster means of all level-1 variables; -->
-<!-- 5.	Include all level-1 interactions implied by the analytic model; -->
-<!-- 6.	Include all level-2 predictors; -->
-<!-- 7.	Include all level-2 interactions implied by the analytic model; -->
-<!-- 8.	Include all cross-level interactions implied by the analytic model; -->
-<!-- 9.	Include predictors related to the missingness and the target; -->
-<!-- 10.	Exclude any terms involving the target -->
-
-<!-- 1. Include all variables that appear in the analysis model, including transformation, interactions and outcomes -->
-<!-- 2. Include all variables that are related to the nonresponse -->
-<!-- 3. Include all variables that explain a considerable amount of variance -->
-<!-- 4. Remove variables that have too many missing values within the subgroup of incomplete cases -->
-
-
-
----
-
-## Sandbox
-
-Fix cluster-level missingness determinately.
-```{r}
-# meth <- make.method(dat)
-# meth["experience_j"] <- "2lonly.mean"
-# meth[meth != "2lonly.mean"] <- ""
-# pred <- make.predictorMatrix(dat)
-# pred[] <- 0
-# pred[, "cluster_id"] <- -2
-# imp <- mice(
-#   popular_MAR, 
-#   m = 1, 
-#   method = meth, 
-#   predictorMatrix = pred,
-#   maxit = 1)
-# plot_pattern(complete(imp))
+```{r, echo=TRUE}
+cca <- lm(
+  popularity_ij ~ 1, 
+  data = dat
+  )
+tidy(cca)
 ```
 
-This procedure has fixed the missing experience value 
-
-Does not work if there are inconsistencies within clusters! But we can do this manually.
-
-```{r}
-# dat |>
-#   group_by(cluster_id) |>
-#   reframe(teacher_experience = unique(experience_j))
+```{r, echo=TRUE}
+fit <- with(
+  imp,
+  lm(popularity_ij ~ 1, data = dat)
+  ) |> 
+  pool()
+tidy(fit)
 ```
 
-This shows us that in the first cluster teacher experience of 4 and 24 is recorded.
-
+#### Intercept-only model
 ```{r}
-# dat |>
-#   filter(cluster_id == 1) |>
-#   ggplot(aes(experience_j)) + geom_histogram()
+cca <- lmer(
+  popularity_ij ~ (1 | cluster_id),
+  data = dat,
+  REML = FALSE
+  )
+tidy(cca)
 ```
 
-For most pupils, teacher experience is 24. We can quite safely assume that the teacher experience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24. The following line of code sets the teacher experience of 4 manually as missing.
-
-```{r}
-# dat[dat$cluster_id == 1 & (is.na(dat$experience_j) | dat$experience_j == 4), "experience_j"] <- NA
+```{r, echo=TRUE}
+fit <- with(
+  imp,
+  lmer(
+    popularity_ij ~ (1 | cluster_id), 
+    data = dat, 
+    REML = FALSE)
+  ) 
+pool(fit) |> tidy()
 ```
 
+
+```{r, echo=TRUE}
+mitml::testEstimates(as.mitml.result(fit), extra.pars = TRUE)
+```
+
+#### Model with explanatory variables
+
 ```{r}
-# imp <- mice(
-#   popular_MAR, 
-#   m = 1, 
-#   method = meth, 
-#   predictorMatrix = pred,
-#   maxit = 1)
-# plot_pattern(complete(imp))
+cca <- lmer(
+  popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1 | cluster_id),
+  data = dat,
+  REML = FALSE
+  )
+tidy(cca)
+```
+
+
+```{r, echo=TRUE}
+fit <- with(
+  imp,
+  lmer(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1 | cluster_id),
+    data = dat, 
+    REML = FALSE)
+  ) 
+pool(fit) |> tidy()
+```
+
+
+```{r, echo=TRUE}
+mitml::testEstimates(as.mitml.result(fit), extra.pars = TRUE)
+```
+
+#### Model with explanatory variables, extraversion slope random
+
+```{r}
+cca <- lmer(
+  popularity_ij ~ gender_ij + extraversion_ij + experience_j +
+    (1  + extraversion_ij | cluster_id),
+  data = dat,
+  REML = FALSE
+  )
+tidy(cca)
+```
+
+```{r, echo=TRUE}
+fit <- with(
+  imp,
+  lmer(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
+      (1  + extraversion_ij | cluster_id), 
+    data = dat, 
+    REML = FALSE)
+  ) 
+pool(fit) |> tidy()
+```
+
+
+```{r, echo=TRUE}
+mitml::testEstimates(as.mitml.result(fit), extra.pars = TRUE)
+```
+
+#### Model with with cross-level interaction
+
+```{r}
+cca <- lmer(
+  popularity_ij ~ gender_ij + extraversion_ij + experience_j +
+    extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id),
+  data = dat,
+  REML = FALSE
+  )
+tidy(cca)
+```
+
+```{r, echo=TRUE}
+fit <- with(
+  imp,
+  lmer(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
+      extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id),  
+    data = dat, 
+    REML = FALSE)
+  ) 
+pool(fit) |> tidy()
+```
+
+```{r, echo=TRUE}
+mitml::testEstimates(as.mitml.result(fit), extra.pars = TRUE)
 ```
 
 
 # References
-
 

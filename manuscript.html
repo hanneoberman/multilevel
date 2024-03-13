@@ -100,9 +100,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#imputation-methods" id="toc-imputation-methods" class="nav-link" data-scroll-target="#imputation-methods">Imputation methods</a></li>
   <li><a href="#imputation-model-predictors" id="toc-imputation-model-predictors" class="nav-link" data-scroll-target="#imputation-model-predictors">Imputation model predictors</a></li>
-  <li><a href="#analysis" id="toc-analysis" class="nav-link" data-scroll-target="#analysis">Analysis</a></li>
   </ul></li>
-  <li><a href="#sandbox" id="toc-sandbox" class="nav-link" data-scroll-target="#sandbox">Sandbox</a></li>
+  </ul></li>
+  <li><a href="#visualize" id="toc-visualize" class="nav-link" data-scroll-target="#visualize">Visualize</a>
+  <ul class="collapse">
+  <li><a href="#analysis" id="toc-analysis" class="nav-link" data-scroll-target="#analysis">Analysis</a></li>
   </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
@@ -558,7 +560,7 @@ Please verify whether this matches the requested mapping variable.</code></pre>
    "2lonly.pmm"        "2l.pmm" </code></pre>
 </div>
 </div>
-<p>All incomplete variable have a multilevel imputation method.</p>
+<p>All incomplete variables have a multilevel imputation method.</p>
 </section>
 <section id="imputation-model-predictors" class="level3">
 <h3 class="anchored" data-anchor-id="imputation-model-predictors">Imputation model predictors</h3>
@@ -755,7 +757,7 @@ does not run. Simplify imputation model</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">range</span>(mice<span class="sc">::</span><span class="fu">complete</span>(imp)<span class="sc">$</span>popularity_ij)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.000000 9.304579</code></pre>
+<pre><code>[1] 0.0 9.2</code></pre>
 </div>
 </div>
 <p>If a negative value for popularity is impossible, one might decide to re-impute the data using a different imputation method. For our analyses, a negative value falls outside the range of observations, but does not require re-imputation.</p>
@@ -819,70 +821,352 @@ does not run. Simplify imputation model</code></pre>
 </div>
 </section>
 </section>
+</section>
+</section>
+<section id="visualize" class="level1">
+<h1>Visualize</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggmice</span>(imp, <span class="fu">aes</span>(<span class="at">y =</span> popularity_ij, <span class="at">x =</span> extraversion_ij, <span class="at">group =</span> cluster_id)) <span class="sc">+</span></span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">color =</span> <span class="st">"grey"</span>, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">alpha =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="fu">aes</span>(<span class="at">group =</span> <span class="cn">NULL</span>), <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">alpha =</span> <span class="fl">0.1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="manuscript_files/figure-html/unnamed-chunk-56-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 <section id="analysis" class="level3">
 <h3 class="anchored" data-anchor-id="analysis">Analysis</h3>
 <p>After successful imputation, we can analyze the imputed data and pool the results for further analysis.</p>
-<!-- 1. Define the most general analytic model to be applied to imputed data; -->
-<!-- 2. Select a 2l method that imputes close to the data; -->
-<!-- 3. Include all level-1 variables; -->
-<!-- 4. Include the disaggregated cluster means of all level-1 variables; -->
-<!-- 5. Include all level-1 interactions implied by the analytic model; -->
-<!-- 6. Include all level-2 predictors; -->
-<!-- 7. Include all level-2 interactions implied by the analytic model; -->
-<!-- 8. Include all cross-level interactions implied by the analytic model; -->
-<!-- 9. Include predictors related to the missingness and the target; -->
-<!-- 10.    Exclude any terms involving the target -->
-<!-- 1. Include all variables that appear in the analysis model, including transformation, interactions and outcomes -->
-<!-- 2. Include all variables that are related to the nonresponse -->
-<!-- 3. Include all variables that explain a considerable amount of variance -->
-<!-- 4. Remove variables that have too many missing values within the subgroup of incomplete cases -->
-<hr>
+<section id="single-level-model" class="level4">
+<h4 class="anchored" data-anchor-id="single-level-model">Single-level model</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>cca <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> <span class="dv">1</span>, </span>
+<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat</span>
+<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(cca)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 5
+  term        estimate std.error statistic p.value
+  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+1 (Intercept)     5.03    0.0396      127.       0</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a>  imp,</span>
+<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lm</span>(popularity_ij <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> dat)</span>
+<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pool</span>()</span>
+<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         term estimate  std.error statistic p.value b       df dfcom
+1 (Intercept) 5.033555 0.03963228  127.0065       0 0 1197.882  1200
+          fmi lambda m riv        ubar
+1 0.001665443      0 5   0 0.001570717</code></pre>
+</div>
+</div>
 </section>
+<section id="intercept-only-model" class="level4">
+<h4 class="anchored" data-anchor-id="intercept-only-model">Intercept-only model</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb90"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a>cca <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> (<span class="dv">1</span> <span class="sc">|</span> cluster_id),</span>
+<span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat,</span>
+<span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb90-5"><a href="#cb90-5" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(cca)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 6
+  effect   group      term            estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)        5.02     0.0891      56.4
+2 ran_pars cluster_id sd__(Intercept)    0.831   NA           NA  
+3 ran_pars Residual   sd__Observation    1.09    NA           NA  </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a>  imp,</span>
+<span id="cb92-3"><a href="#cb92-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lmer</span>(</span>
+<span id="cb92-4"><a href="#cb92-4" aria-hidden="true" tabindex="-1"></a>    popularity_ij <span class="sc">~</span> (<span class="dv">1</span> <span class="sc">|</span> cluster_id), </span>
+<span id="cb92-5"><a href="#cb92-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> dat, </span>
+<span id="cb92-6"><a href="#cb92-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb92-7"><a href="#cb92-7" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb92-8"><a href="#cb92-8" aria-hidden="true" tabindex="-1"></a><span class="fu">pool</span>(fit) <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         term estimate std.error statistic p.value b       df dfcom         fmi
+1 (Intercept) 5.021201 0.0890947  56.35802       0 0 1195.882  1198 0.001668221
+  lambda m riv        ubar
+1      0 5   0 0.007937865</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a>mitml<span class="sc">::</span><span class="fu">testEstimates</span>(<span class="fu">as.mitml.result</span>(fit), <span class="at">extra.pars =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+
+mitml::testEstimates(model = as.mitml.result(fit), extra.pars = TRUE)
+
+Final parameter estimates and inferences obtained from 5 imputed data sets.
+
+             Estimate Std.Error   t.value        df   P(&gt;|t|)       RIV       FMI 
+(Intercept)     5.021     0.089    56.358       Inf     0.000     0.000     0.000 
+
+                                Estimate 
+Intercept~~Intercept|cluster_id    0.690 
+Residual~~Residual                 1.193 
+ICC|cluster_id                     0.367 
+
+Unadjusted hypothesis test as appropriate in larger samples.</code></pre>
+</div>
+</div>
 </section>
-<section id="sandbox" class="level2">
-<h2 class="anchored" data-anchor-id="sandbox">Sandbox</h2>
-<p>Fix cluster-level missingness determinately.</p>
+<section id="model-with-explanatory-variables" class="level4">
+<h4 class="anchored" data-anchor-id="model-with-explanatory-variables">Model with explanatory variables</h4>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="co"># meth &lt;- make.method(dat)</span></span>
-<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a><span class="co"># meth["experience_j"] &lt;- "2lonly.mean"</span></span>
-<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a><span class="co"># meth[meth != "2lonly.mean"] &lt;- ""</span></span>
-<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a><span class="co"># pred &lt;- make.predictorMatrix(dat)</span></span>
-<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a><span class="co"># pred[] &lt;- 0</span></span>
-<span id="cb84-6"><a href="#cb84-6" aria-hidden="true" tabindex="-1"></a><span class="co"># pred[, "cluster_id"] &lt;- -2</span></span>
-<span id="cb84-7"><a href="#cb84-7" aria-hidden="true" tabindex="-1"></a><span class="co"># imp &lt;- mice(</span></span>
-<span id="cb84-8"><a href="#cb84-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   popular_MAR, </span></span>
-<span id="cb84-9"><a href="#cb84-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   m = 1, </span></span>
-<span id="cb84-10"><a href="#cb84-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   method = meth, </span></span>
-<span id="cb84-11"><a href="#cb84-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   predictorMatrix = pred,</span></span>
-<span id="cb84-12"><a href="#cb84-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   maxit = 1)</span></span>
-<span id="cb84-13"><a href="#cb84-13" aria-hidden="true" tabindex="-1"></a><span class="co"># plot_pattern(complete(imp))</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>cca <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cluster_id),</span>
+<span id="cb96-3"><a href="#cb96-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat,</span>
+<span id="cb96-4"><a href="#cb96-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb96-5"><a href="#cb96-5" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb96-6"><a href="#cb96-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(cca)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 6
+  effect   group      term            estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)      -0.455    0.199       -2.28
+2 fixed    &lt;NA&gt;       gender_ij         1.29     0.0481      26.7 
+3 fixed    &lt;NA&gt;       extraversion_ij   0.447    0.0215      20.7 
+4 fixed    &lt;NA&gt;       experience_j      0.0877   0.00874     10.0 
+5 ran_pars cluster_id sd__(Intercept)   0.518   NA           NA   
+6 ran_pars Residual   sd__Observation   0.764   NA           NA   </code></pre>
 </div>
-<p>This procedure has fixed the missing experience value</p>
-<p>Does not work if there are inconsistencies within clusters! But we can do this manually.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb85"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="co"># dat |&gt;</span></span>
-<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   group_by(cluster_id) |&gt;</span></span>
-<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   reframe(teacher_experience = unique(experience_j))</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>This shows us that in the first cluster teacher experience of 4 and 24 is recorded.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="co"># dat |&gt;</span></span>
-<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   filter(cluster_id == 1) |&gt;</span></span>
-<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   ggplot(aes(experience_j)) + geom_histogram()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>For most pupils, teacher experience is 24. We can quite safely assume that the teacher experience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24. The following line of code sets the teacher experience of 4 manually as missing.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb87"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="co"># dat[dat$cluster_id == 1 &amp; (is.na(dat$experience_j) | dat$experience_j == 4), "experience_j"] &lt;- NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="co"># imp &lt;- mice(</span></span>
-<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   popular_MAR, </span></span>
-<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   m = 1, </span></span>
-<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   method = meth, </span></span>
-<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   predictorMatrix = pred,</span></span>
-<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   maxit = 1)</span></span>
-<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a><span class="co"># plot_pattern(complete(imp))</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>  imp,</span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lmer</span>(</span>
+<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a>    popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cluster_id),</span>
+<span id="cb98-5"><a href="#cb98-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> dat, </span>
+<span id="cb98-6"><a href="#cb98-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb98-7"><a href="#cb98-7" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb98-8"><a href="#cb98-8" aria-hidden="true" tabindex="-1"></a><span class="fu">pool</span>(fit) <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             term    estimate   std.error statistic       p.value b       df
+1     (Intercept) -0.45459695 0.199053149 -2.283797  2.255904e-02 0 1189.882
+2       gender_ij  1.28611143 0.048112155 26.731528 1.120524e-123 0 1189.882
+3 extraversion_ij  0.44652838 0.021546495 20.723945  1.056952e-81 0 1189.882
+4    experience_j  0.08767041 0.008744419 10.025871  9.120374e-23 0 1189.882
+  dfcom         fmi lambda m riv         ubar
+1  1192 0.001676611      0 5   0 3.962216e-02
+2  1192 0.001676611      0 5   0 2.314779e-03
+3  1192 0.001676611      0 5   0 4.642515e-04
+4  1192 0.001676611      0 5   0 7.646486e-05</code></pre>
 </div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb100"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a>mitml<span class="sc">::</span><span class="fu">testEstimates</span>(<span class="fu">as.mitml.result</span>(fit), <span class="at">extra.pars =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+
+mitml::testEstimates(model = as.mitml.result(fit), extra.pars = TRUE)
+
+Final parameter estimates and inferences obtained from 5 imputed data sets.
+
+                 Estimate Std.Error   t.value        df   P(&gt;|t|)       RIV       FMI 
+(Intercept)        -0.455     0.199    -2.284       Inf     0.022     0.000     0.000 
+gender_ij           1.286     0.048    26.732       Inf     0.000     0.000     0.000 
+extraversion_ij     0.447     0.022    20.724       Inf     0.000     0.000     0.000 
+experience_j        0.088     0.009    10.026       Inf     0.000     0.000     0.000 
+
+                                Estimate 
+Intercept~~Intercept|cluster_id    0.269 
+Residual~~Residual                 0.583 
+ICC|cluster_id                     0.316 
+
+Unadjusted hypothesis test as appropriate in larger samples.</code></pre>
+</div>
+</div>
+</section>
+<section id="model-with-explanatory-variables-extraversion-slope-random" class="level4">
+<h4 class="anchored" data-anchor-id="model-with-explanatory-variables-extraversion-slope-random">Model with explanatory variables, extraversion slope random</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb102"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a>cca <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb102-2"><a href="#cb102-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span></span>
+<span id="cb102-3"><a href="#cb102-3" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">1</span>  <span class="sc">+</span> extraversion_ij <span class="sc">|</span> cluster_id),</span>
+<span id="cb102-4"><a href="#cb102-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat,</span>
+<span id="cb102-5"><a href="#cb102-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb102-6"><a href="#cb102-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb102-7"><a href="#cb102-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(cca)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 8 × 6
+  effect   group      term                          estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;                            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)                    -0.438    0.222       -1.97
+2 fixed    &lt;NA&gt;       gender_ij                       1.28     0.0476      26.9 
+3 fixed    &lt;NA&gt;       extraversion_ij                 0.440    0.0284      15.5 
+4 fixed    &lt;NA&gt;       experience_j                    0.0871   0.00863     10.1 
+5 ran_pars cluster_id sd__(Intercept)                 1.13    NA           NA   
+6 ran_pars cluster_id cor__(Intercept).extraversio…  -0.897   NA           NA   
+7 ran_pars cluster_id sd__extraversion_ij             0.180   NA           NA   
+8 ran_pars Residual   sd__Observation                 0.740   NA           NA   </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb104"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb104-1"><a href="#cb104-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb104-2"><a href="#cb104-2" aria-hidden="true" tabindex="-1"></a>  imp,</span>
+<span id="cb104-3"><a href="#cb104-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lmer</span>(</span>
+<span id="cb104-4"><a href="#cb104-4" aria-hidden="true" tabindex="-1"></a>    popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> </span>
+<span id="cb104-5"><a href="#cb104-5" aria-hidden="true" tabindex="-1"></a>      (<span class="dv">1</span>  <span class="sc">+</span> extraversion_ij <span class="sc">|</span> cluster_id), </span>
+<span id="cb104-6"><a href="#cb104-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> dat, </span>
+<span id="cb104-7"><a href="#cb104-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb104-8"><a href="#cb104-8" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb104-9"><a href="#cb104-9" aria-hidden="true" tabindex="-1"></a><span class="fu">pool</span>(fit) <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             term    estimate   std.error statistic       p.value b       df
+1     (Intercept) -0.43804176 0.222237366 -1.971054  4.894959e-02 0 1187.883
+2       gender_ij  1.28026787 0.047605007 26.893555 8.201898e-125 0 1187.883
+3 extraversion_ij  0.43968176 0.028356053 15.505746  1.603530e-49 0 1187.883
+4    experience_j  0.08706721 0.008630314 10.088533  5.090619e-23 0 1187.883
+  dfcom         fmi lambda m riv         ubar
+1  1190 0.001679427      0 5   0 4.938945e-02
+2  1190 0.001679427      0 5   0 2.266237e-03
+3  1190 0.001679427      0 5   0 8.040658e-04
+4  1190 0.001679427      0 5   0 7.448233e-05</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb106"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a>mitml<span class="sc">::</span><span class="fu">testEstimates</span>(<span class="fu">as.mitml.result</span>(fit), <span class="at">extra.pars =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+
+mitml::testEstimates(model = as.mitml.result(fit), extra.pars = TRUE)
+
+Final parameter estimates and inferences obtained from 5 imputed data sets.
+
+                 Estimate Std.Error   t.value        df   P(&gt;|t|)       RIV       FMI 
+(Intercept)        -0.438     0.222    -1.971       Inf     0.049     0.000     0.000 
+gender_ij           1.280     0.048    26.894       Inf     0.000     0.000     0.000 
+extraversion_ij     0.440     0.028    15.506       Inf     0.000     0.000     0.000 
+experience_j        0.087     0.009    10.089       Inf     0.000     0.000     0.000 
+
+                                            Estimate 
+Intercept~~Intercept|cluster_id                1.283 
+extraversion_ij~~extraversion_ij|cluster_id    0.032 
+Intercept~~extraversion_ij|cluster_id         -0.183 
+Residual~~Residual                             0.548 
+ICC|cluster_id                                 0.701 
+
+Unadjusted hypothesis test as appropriate in larger samples.</code></pre>
+</div>
+</div>
+</section>
+<section id="model-with-with-cross-level-interaction" class="level4">
+<h4 class="anchored" data-anchor-id="model-with-with-cross-level-interaction">Model with with cross-level interaction</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb108"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a>cca <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
+<span id="cb108-2"><a href="#cb108-2" aria-hidden="true" tabindex="-1"></a>  popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span></span>
+<span id="cb108-3"><a href="#cb108-3" aria-hidden="true" tabindex="-1"></a>    extraversion_ij<span class="sc">:</span>experience_j <span class="sc">+</span> (<span class="dv">1</span>  <span class="sc">+</span> extraversion_ij <span class="sc">|</span> cluster_id),</span>
+<span id="cb108-4"><a href="#cb108-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat,</span>
+<span id="cb108-5"><a href="#cb108-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">REML =</span> <span class="cn">FALSE</span></span>
+<span id="cb108-6"><a href="#cb108-6" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00495196 (tol = 0.002, component 1)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb110"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb110-1"><a href="#cb110-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(cca)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 9 × 6
+  effect   group      term                          estimate std.error statistic
+  &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt;                            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 fixed    &lt;NA&gt;       (Intercept)                    -2.33     0.312       -7.49
+2 fixed    &lt;NA&gt;       gender_ij                       1.26     0.0468      27.0 
+3 fixed    &lt;NA&gt;       extraversion_ij                 0.779    0.0462      16.8 
+4 fixed    &lt;NA&gt;       experience_j                    0.219    0.0190      11.6 
+5 fixed    &lt;NA&gt;       extraversion_ij:experience_j   -0.0239   0.00296     -8.07
+6 ran_pars cluster_id sd__(Intercept)                 0.600   NA           NA   
+7 ran_pars cluster_id cor__(Intercept).extraversio…  -0.701   NA           NA   
+8 ran_pars cluster_id sd__extraversion_ij             0.0258  NA           NA   
+9 ran_pars Residual   sd__Observation                 0.741   NA           NA   </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb112"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb112-2"><a href="#cb112-2" aria-hidden="true" tabindex="-1"></a>  imp,</span>
+<span id="cb112-3"><a href="#cb112-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lmer</span>(</span>
+<span id="cb112-4"><a href="#cb112-4" aria-hidden="true" tabindex="-1"></a>    popularity_ij <span class="sc">~</span> gender_ij <span class="sc">+</span> extraversion_ij <span class="sc">+</span> experience_j <span class="sc">+</span> </span>
+<span id="cb112-5"><a href="#cb112-5" aria-hidden="true" tabindex="-1"></a>      extraversion_ij<span class="sc">:</span>experience_j <span class="sc">+</span> (<span class="dv">1</span>  <span class="sc">+</span> extraversion_ij <span class="sc">|</span> cluster_id),  </span>
+<span id="cb112-6"><a href="#cb112-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> dat, </span>
+<span id="cb112-7"><a href="#cb112-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb112-8"><a href="#cb112-8" aria-hidden="true" tabindex="-1"></a>  ) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00495196 (tol = 0.002, component 1)
+
+Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00495196 (tol = 0.002, component 1)
+
+Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00495196 (tol = 0.002, component 1)
+
+Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00495196 (tol = 0.002, component 1)
+
+Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, :
+Model failed to converge with max|grad| = 0.00495196 (tol = 0.002, component 1)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb114"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pool</span>(fit) <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                          term    estimate   std.error statistic       p.value
+1                  (Intercept) -2.33429638 0.311701929 -7.488874  1.351136e-13
+2                    gender_ij  1.26491027 0.046825663 27.013184 1.162079e-125
+3              extraversion_ij  0.77879482 0.046234259 16.844540  2.986533e-57
+4                 experience_j  0.21927052 0.018952063 11.569744  2.074365e-29
+5 extraversion_ij:experience_j -0.02386015 0.002955871 -8.072122  1.681341e-15
+  b       df dfcom         fmi lambda m riv         ubar
+1 0 1186.883  1189 0.001680838      0 5   0 9.715809e-02
+2 0 1186.883  1189 0.001680838      0 5   0 2.192643e-03
+3 0 1186.883  1189 0.001680838      0 5   0 2.137607e-03
+4 0 1186.883  1189 0.001680838      0 5   0 3.591807e-04
+5 0 1186.883  1189 0.001680838      0 5   0 8.737174e-06</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb116"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb116-1"><a href="#cb116-1" aria-hidden="true" tabindex="-1"></a>mitml<span class="sc">::</span><span class="fu">testEstimates</span>(<span class="fu">as.mitml.result</span>(fit), <span class="at">extra.pars =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+
+mitml::testEstimates(model = as.mitml.result(fit), extra.pars = TRUE)
+
+Final parameter estimates and inferences obtained from 5 imputed data sets.
+
+                              Estimate Std.Error   t.value        df   P(&gt;|t|)       RIV       FMI 
+(Intercept)                     -2.334     0.312    -7.489       Inf     0.000     0.000     0.000 
+gender_ij                        1.265     0.047    27.013       Inf     0.000     0.000     0.000 
+extraversion_ij                  0.779     0.046    16.845       Inf     0.000     0.000     0.000 
+experience_j                     0.219     0.019    11.570       Inf     0.000     0.000     0.000 
+extraversion_ij:experience_j    -0.024     0.003    -8.072       Inf     0.000     0.000     0.000 
+
+                                            Estimate 
+Intercept~~Intercept|cluster_id                0.360 
+extraversion_ij~~extraversion_ij|cluster_id    0.001 
+Intercept~~extraversion_ij|cluster_id         -0.011 
+Residual~~Residual                             0.550 
+ICC|cluster_id                                 0.396 
+
+Unadjusted hypothesis test as appropriate in larger samples.</code></pre>
+</div>
+</div>
+</section>
 </section>
 </section>
 <section id="references" class="level1">
