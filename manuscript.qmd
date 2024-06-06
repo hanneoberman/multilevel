@@ -8,6 +8,17 @@ format:
 
 <!-- This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation. -->
 
+```{r}
+library(knitr)
+# print everything as kable ----
+knit_print.data.frame <- function (x, options, ...) {
+  knitr::kable(x) |> knitr::knit_print(options, ...)
+}
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+options(scipen = 999, digits = 3)
+```
+
+
 # Introduction
 This is a tutorial on multiple imputation of incomplete multilevel data with [mice]{.pkg} in [R]{.proglang}. But before we dive into the details and feel sorry for all the holes in our data, it is important to go a few steps back. Because it is not just holes in our data. Most often, there is more data than holes. And more data means more information. In this tutorial we frame your mind to consider the flow of that information in such a way that the multilevel structure is taken into account. In other words, we will show you how to solve for the incomplete data to fit your multilevel model. 
 
@@ -54,13 +65,13 @@ It becomes problematic when people aim to infer mechanisms from the data itself.
 Alternatively, we could argue the same for MCAR. The inability to distinguish both MAR and MCAR from MNAR based on the data alone, renders the many MCAR tests that are available in software futile. 
 :::
 
-1. missing data occur often in data with human subjects
-2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest
-3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques
-4. if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data
-4. both missingness and multilevel structures require advanced statistical techniques
-5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data
-6. we illustrate the use of the software by means of a case study
+<!-- 1. missing data occur often in data with human subjects -->
+<!-- 2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest -->
+<!-- 3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques -->
+<!-- 4. if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data -->
+<!-- 4. both missingness and multilevel structures require advanced statistical techniques -->
+<!-- 5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data -->
+<!-- 6. we illustrate the use of the software by means of a case study -->
 
 # Methods
 
@@ -86,56 +97,56 @@ With the `predictorMatix` argument, `mice` users can define which columns should
 <!-- -	2l.bin, 2l.lmer, 2l.norm and 2l.pan use code 2 to indicate the random effects -->
 <!-- -	2l.pan uses codes 3 and 4 to add class means to codes 1 and 2 respectively -->
 
-FIMD, section 7.10
+<!-- FIMD, section 7.10 -->
 
-> Recipe for a level-1 target:
+<!-- > Recipe for a level-1 target: -->
 
-> 1.	Define the most general analytic model to be applied to imputed data;
-2.	Select a 2l method that imputes close to the data;
-3.	Include all level-1 variables;
-4.	Include the disaggregated cluster means of all level-1 variables;
-5.	Include all level-1 interactions implied by the analytic model;
-6.	Include all level-2 predictors;
-7.	Include all level-2 interactions implied by the analytic model;
-8.	Include all cross-level interactions implied by the analytic model;
-9.	Include predictors related to the missingness and the target;
-10.	Exclude any terms involving the target
+<!-- > 1.	Define the most general analytic model to be applied to imputed data; -->
+<!-- 2.	Select a 2l method that imputes close to the data; -->
+<!-- 3.	Include all level-1 variables; -->
+<!-- 4.	Include the disaggregated cluster means of all level-1 variables; -->
+<!-- 5.	Include all level-1 interactions implied by the analytic model; -->
+<!-- 6.	Include all level-2 predictors; -->
+<!-- 7.	Include all level-2 interactions implied by the analytic model; -->
+<!-- 8.	Include all cross-level interactions implied by the analytic model; -->
+<!-- 9.	Include predictors related to the missingness and the target; -->
+<!-- 10.	Exclude any terms involving the target -->
 
-> Recipe for a level-2 target:
+<!-- > Recipe for a level-2 target: -->
 
-> 1.	Define the most general analytic model to be applied to imputed
-data;
-2.	Select a 2lonly method that imputes close to the data;
-3.	Include the cluster means of all level-1 variables;
-4.	Include the cluster means of all level-1 interactions;
-5.	Include all level-2 predictors;
-6.	Include all interactions of level-2 variables;
-7.	Include predictors related to the missingness and the target;
-8.	Exclude any terms involving the target
+<!-- > 1.	Define the most general analytic model to be applied to imputed -->
+<!-- data; -->
+<!-- 2.	Select a 2lonly method that imputes close to the data; -->
+<!-- 3.	Include the cluster means of all level-1 variables; -->
+<!-- 4.	Include the cluster means of all level-1 interactions; -->
+<!-- 5.	Include all level-2 predictors; -->
+<!-- 6.	Include all interactions of level-2 variables; -->
+<!-- 7.	Include predictors related to the missingness and the target; -->
+<!-- 8.	Exclude any terms involving the target -->
 
 # Case study
 
 Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. the most general analytic model to be applied to imputed data), plus an assumed missingness mechanism. This tutorial assumes M(C)AR, for MNAR see Munoz et al.
 
-1. Load the data, make sure the variables are correctly formatted (e.g. numeric clustering variable)
-2. Explore the missingness
-2. ~~Fix any cluster-level missingness determinately (note that `2l.only` methods do not work if there are inconsistencies, fix those first!). Re-evaluate the missingness~~
-3. Explore bivariate relations and associations with missingness indicators (optionally test the associations?)
-4. For each incomplete variable:
-  - Determine the imputation method
-  - Choose imputation model predictors (see recipe)
-5. Set methods vector and predictor matrix
-6. Impute the incomplete data
-6. If error...
-6. After successful run:
-  - Evaluate convergence
-  - Evaluate imputations
-9. Analyze and pool
-9. If error... (e.g. rescale variables by converting imputations to long format, mutate, then back to mids)
-9. After successful run:
-  - Evaluate missingness ratio's (e.g. fraction of missing information)
-  - If necessary, increase $m$ and re-impute
-10. For further multilevel model building, AICs could be pooled, how?
+<!-- 1. Load the data, make sure the variables are correctly formatted (e.g. numeric clustering variable) -->
+<!-- 2. Explore the missingness -->
+<!-- 2. ~~Fix any cluster-level missingness determinately (note that `2l.only` methods do not work if there are inconsistencies, fix those first!). Re-evaluate the missingness~~ -->
+<!-- 3. Explore bivariate relations and associations with missingness indicators (optionally test the associations?) -->
+<!-- 4. For each incomplete variable: -->
+<!--   - Determine the imputation method -->
+<!--   - Choose imputation model predictors (see recipe) -->
+<!-- 5. Set methods vector and predictor matrix -->
+<!-- 6. Impute the incomplete data -->
+<!-- 6. If error... -->
+<!-- 6. After successful run: -->
+<!--   - Evaluate convergence -->
+<!--   - Evaluate imputations -->
+<!-- 9. Analyze and pool -->
+<!-- 9. If error... (e.g. rescale variables by converting imputations to long format, mutate, then back to mids) -->
+<!-- 9. After successful run: -->
+<!--   - Evaluate missingness ratio's (e.g. fraction of missing information) -->
+<!--   - If necessary, increase $m$ and re-impute -->
+<!-- 10. For further multilevel model building, AICs could be pooled, how? -->
 
 The most general analytic model to be applied to imputed data (Hox et al, 2018, p. 17, equation 2.12).
 
@@ -159,14 +170,148 @@ library(broom)        # for tidying model output
 library(broom.mixed)  # for tidying model output
 ```
 
+Load the complete data.
+```{r}
+load("data/popular.RData")
+```
 
-Load the data
+Load the incomplete data.
 ```{r}
 load("data/popular_MAR.RData")
 dat <- popular_MAR
 ```
 
-Inspect the missingness.
+
+## Comparative truth
+
+Sequentially fit multilevel models to the complete data to obtain the true parameter estimates.
+
+```{r}
+mod_true_singlelevel <- lm(popularity_ij ~ 1, data = popular) 
+```
+
+```{r}
+mod_true_singlelevel |> tidy()
+```
+
+```{r}
+mod_true_intercept <- lmer(popularity_ij ~ (1 | cluster_id), data = popular, REML = FALSE) 
+```
+
+```{r}
+mod_true_intercept |> tidy()
+```
+
+```{r}
+mod_true_predictors <- lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1 | cluster_id), data = popular, REML = FALSE)
+```
+
+```{r}
+mod_true_predictors |> tidy()
+```
+
+
+```{r}
+mod_true_randomslope <- lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1  + extraversion_ij | cluster_id), data = popular, REML = FALSE)
+```
+
+```{r}
+mod_true_randomslope |> tidy()
+```
+
+```{r}
+mod_true_interaction <- lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id), data = popular, REML = FALSE)
+```
+
+```{r}
+mod_true_interaction |> tidy()
+```
+
+## Complete-case analysis
+
+Sequentially fit multilevel models to the incomplete data to obtain the parameter estimates after list-wise deletion.
+
+
+```{r}
+mod_cca_singlelevel <- lm(popularity_ij ~ 1, data = dat) 
+```
+
+```{r}
+mod_cca_singlelevel |> tidy()
+```
+
+```{r}
+mod_cca_intercept <- lmer(popularity_ij ~ (1 | cluster_id), data = dat, REML = FALSE) 
+```
+
+```{r}
+mod_cca_intercept |> tidy()
+```
+
+```{r}
+mod_cca_predictors <- lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1 | cluster_id), data = dat, REML = FALSE)
+```
+
+```{r}
+mod_cca_predictors |> tidy()
+```
+
+
+```{r}
+mod_cca_randomslope <- lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1  + extraversion_ij | cluster_id), data = dat, REML = FALSE)
+```
+
+```{r}
+mod_cca_randomslope |> tidy()
+```
+
+```{r}
+mod_cca_interaction <- lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id), data = dat, REML = FALSE)
+```
+
+```{r}
+mod_cca_interaction |> tidy()
+```
+
+
+<!-- 1.	Inspect incomplete data -->
+<!-- a.	Explore variables: determine imputation methods with str() and ggmice(),  -->
+<!-- b.	If necessary, add variables for polynomial terms -->
+<!-- c.	Explore missingness: evaluate missing data patterns with plot_pattern() -->
+<!-- d.	Determine imputation model predictors using plot_corr(), plot_flux(), and ggmice() -->
+<!-- 2.	Build imputation models -->
+<!-- a.	Create methods vector with imputation methods using make.methods() -->
+<!-- b.	Create predictor matrix with imputation model predictors using make.predictorMatrix() -->
+<!-- c.	Evaluate imputation models using plot_pred() -->
+<!-- 3.	Run imputation algorithm -->
+<!-- a.	Impute: fill in the missing values with mice() -->
+<!-- b.	Inspect convergence: visualize algorithmic convergence with plot_trace() -->
+<!-- c.	If necessary, add iterations -->
+<!-- 4.	Evaluate imputations -->
+<!-- a.	Inspect imputed values: assess imputed values with ggmice(), PPC? -->
+<!-- b.	Analyze imputed data: fit the model of scientific interest with lmer()   -->
+<!-- c.	Evaluate missingness metrics with testEstimates() -->
+<!-- d.	If necessary, add imputations -->
+<!-- 5.	Interpret results and report -->
+
+## Inspect incomplete data
+
+### Explore observed data
+
+Assess the structure of the data.
+```{r}
+str(dat)
+```
+
+Print the first few rows of the data.
+```{r}
+head(dat)
+```
+
+
+### Explore missingness
+
+Inspect the missing data patterns.
 ```{r}
 plot_pattern(dat, square = FALSE)
 ```
@@ -177,72 +322,16 @@ Teacher assessment is not part of the analysis model, but may serve as auxiliary
 
 ```{r}
 plot_corr(dat, square = FALSE)
-plot_flux(dat, label = FALSE)
 ```
 
 The auxiliary variable 'teacher assessment' may be useful in the imputation for the incomplete outcome variable 'popularity'. The unit identifier is not relevant, and will be left out of the imputation models.
 
-
-## Complete case analysis
-
-Before we start imputing the incomplete data, we can fit a complete case model to the observed data. This will give us a baseline for comparison with the imputed data. 
-
-Single-level model
 ```{r}
-fit <- lm(
-  popularity_ij ~ 1, 
-  data = dat
-  )
-tidy(fit)
+plot_flux(dat) 
 ```
 
-M0: intercept-only model
-```{r}
-fit <- lmer(
-  popularity_ij ~ (1 | cluster_id), 
-  data = dat, 
-  REML = FALSE
-  )
-tidy(fit)
-```
 
-M1: model with explanatory variables
-```{r}
-fit <- lmer(
-  popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1 | cluster_id), 
-  data = dat, 
-  REML = FALSE
-  )
-tidy(fit)
-```
-
-M1A: model with explanatory variables, extraversion slope random
-```{r}
-fit <- lmer(
-  popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
-    (1  + extraversion_ij | cluster_id), 
-  data = dat, 
-  REML = FALSE
-  )
-tidy(fit)
-```
-
-M0: model with with cross-level interaction
-```{r}
-fit <- lmer(
-  popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
-    extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id), 
-  data = dat, 
-  REML = FALSE
-  )
-tidy(fit)
-```
-
-The last model does not converge. This is likely due to the missingness in the data. We will now impute the incomplete data and re-fit the models.
-
-
-
-## Imputation model building
+## Build imputation models
 
 For each incomplete variable we need to define an imputation model: 1) choose the functional form of the imputation model and 2) select the imputation model predictors. 
 
@@ -256,26 +345,38 @@ meth
 
 The complete identifier variables do not have to be imputed. The default imputation methods for the incomplete variables are not appropriate because of the multilevel structure of the data. We will fill in the methods vector with more appropriate imputation methods, based on the distribution of the incomplete variables. 
 
+#### Popularity
+
 The outcome variable 'popularity' is approximately normally distributed. 
 
 ```{r}
 ggmice(dat, aes(popularity_ij)) + 
-  geom_histogram(fill = "white")
+  geom_density()
 ```
 
 A density plot of the incomplete outcome variable 'popularity' shows that aggregated across clusters, the distribution is approximately normal. Within clusters, there is more variability.
 
 ```{r}
-ggmice(dat, aes(popularity_ij, group = cluster_id)) + 
+ggmice(dat, aes(popularity_ij, group = cluster_id)) +
   geom_density()
 ```
 
-We can use `2l.norm`: a multilevel method using the linear mixed model with heterogeneous error variances. 
+Further inspect the distribution of the outcome variable in the first few clusters.
+```{r}
+dat |> 
+  filter(cluster_id %in% unique(dat$cluster_id)[1:4]) |>
+  ggmice(aes(popularity_ij)) + 
+    geom_histogram(fill = "white") +
+    facet_wrap(~cluster_id)
+```
+
+We will use `2l.norm`: a multilevel method using the linear mixed model with heterogeneous error variances. 
 
 ```{r}
 meth["popularity_ij"] <- "2l.norm"
 ```
 
+#### Gender
 
 The unit-level predictor variable 'gender' is dichotomous. 
 ```{r}
@@ -289,6 +390,8 @@ We can use `2l.bin` to impute the missing values.
 meth["gender_ij"] <- "2l.bin"
 ```
 
+#### Extraversion
+
 The unit-level predictor variable 'extraversion' is approximately normally distributed, but not truly continuous. 
 ```{r}
 ggmice(dat, aes(extraversion_ij)) + 
@@ -300,6 +403,8 @@ We can use `2l.pmm` to impute the missing values.
 ```{r}
 meth["extraversion_ij"] <- "2l.pmm"
 ```
+
+#### Teacher assessment
 
 The unit-level auxiliary variable 'teacher assessment' is approximately normally distributed but not continuous either. 
 
@@ -313,6 +418,8 @@ We will use `2l.pmm` for this variable too.
 meth["assessment_ij"] <- "2l.pmm"
 ```
 
+#### Teacher experience
+
 The cluster-level variable 'teacher experience' is continuous. 
 
 ```{r} 
@@ -325,6 +432,8 @@ We can use `2lonly.mean` to impute the missing values if we are sufficiently cer
 ```{r}
 meth["experience_j"] <- "2lonly.pmm"
 ```
+
+#### Methods vector
 
 Re-evaluate the methods vector
 
@@ -436,17 +545,32 @@ The analytic model does not imply any relation with teacher assessment. This var
 pred["assessment_ij", "popularity_ij"] <- 1
 ```
 
+#### Predictor matrix
+
 Finally, clean up the predictor matrix by setting the diagonal to `0`, to exclude any terms involving the target.
 ```{r}
 diag(pred) <- 0
 ```
 
-Our final predictor matrix can be visualized as follows.
+Our final predictor matrix is as follows.
+```{r}
+pred
+```
+
+### Evaluate imputation models
+
+The imputation models can be visualized as follows.
 ```{r}
 plot_pred(pred, meth = meth)
 ```
 
-Impute the data
+## Run imputation algorithm
+
+### Impute
+
+Impute the data using the specified imputation methods and predictor matrix.
+
+
 ```{r, eval=FALSE}
 imp <- mice(
   dat, 
@@ -479,9 +603,16 @@ imp <- mice(
   printFlag = FALSE)
 ```
 
-This code runs! Add iterations and evaluate convergence.
+This code runs! Add iterations to reach algorithmic convergence.
 ```{r}
 imp <- mice.mids(imp, maxit = 9, printFlag = FALSE)
+```
+
+### Evaluate convergence
+
+Check for algorithmic non-convergence.
+
+```{r}
 plot_trace(imp)
 ```
 
@@ -492,7 +623,13 @@ imp <- mice.mids(imp, maxit = 10, printFlag = FALSE)
 plot_trace(imp)
 ```
 
-After 20 iterations, there is no apparent trending visible in the trace plots. We will first evaluate the imputations of the variables with atypical trace plots.
+After 20 iterations, there is no apparent trending visible in the trace plots. 
+
+## Evaluate imputations
+
+### Inspect imputed values
+
+We will first evaluate the imputations of the variables with atypical trace plots.
 
 ```{r}
 ggmice(imp, aes(.imp, experience_j)) + 
@@ -553,7 +690,6 @@ ggmice(imp, aes(assessment_ij, group = .imp)) +
 
 #### Interaction term
 
-
 ```{r}
 ggmice(imp, aes(.imp, extraversion_experience)) + 
   geom_jitter(height = 0)
@@ -564,24 +700,24 @@ ggmice(imp, aes(extraversion_experience, group = .imp)) +
   geom_density()
 ```
 
-# Visualize
+<!-- # Visualize -->
 
-```{r}
-ggmice(imp, aes(y = popularity_ij, x = extraversion_ij, group = cluster_id)) +
-  geom_point(alpha = 0.1) +
-  geom_smooth(color = "grey", method = "lm", se = FALSE, alpha = 0.1) +
-  geom_smooth(aes(group = NULL), color = "black", method = "lm", se = FALSE, alpha = 0.1)
-```
+<!-- ```{r} -->
+<!-- ggmice(imp, aes(y = popularity_ij, x = extraversion_ij, group = cluster_id)) + -->
+<!--   geom_point(alpha = 0.1) + -->
+<!--   geom_smooth(color = "grey", method = "lm", se = FALSE, alpha = 0.1) + -->
+<!--   geom_smooth(aes(group = NULL), color = "black", method = "lm", se = FALSE, alpha = 0.1) -->
+<!-- ``` -->
 
 
-### Analysis
+### Analyze imputed data
 
 After successful imputation, we can analyze the imputed data and pool the results for further analysis.
 
 #### Single-level model
 
 ```{r, echo=TRUE}
-cca <- lm(
+mod_cca_singlelevel <- lm(
   popularity_ij ~ 1, 
   data = dat
   )
@@ -589,7 +725,7 @@ tidy(cca)
 ```
 
 ```{r, echo=TRUE}
-fit <- with(
+mod_imp_singlelevel <- with(
   imp,
   lm(popularity_ij ~ 1, data = dat)
   ) |> 
