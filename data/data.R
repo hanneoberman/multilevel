@@ -61,7 +61,7 @@ set.seed(234)
 # induce multivariate MAR
 names(popular)
 patterns <- rbind(
-  c(1, 1, 0, 1, 1, 1, 1),
+  c(1, 1, 0, 1, 0, 1, 1),
   c(1, 1, 0, 1, 0, 1, 1),
   c(1, 1, 0, 1, 0, 1, 0),
   c(1, 1, 0, 1, 1, 1, 0))
@@ -76,13 +76,16 @@ popular_MAR <- split(popular, ~cluster_id) |>
     )$amp)
 # evaluate missing data pattern
 plot_pattern(popular_MAR)
-# induce univeriate MAR in outcome based on teacher experience
-M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$experience_j))
-popular_MAR[as.logical(M_outcome), c("popularity_ij", "assessment_ij", "extraversion_ij", "gender_ij")] <- NA
+# induce univeriate MAR in outcome based on extraversion
+M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$assessment_ij))
+popular_MAR[as.logical(M_outcome), c("popularity_ij")] <- NA
 plot_pattern(popular_MAR)
-ggmice(popular_MAR, aes(experience_j)) + 
+ggmice(popular_MAR, aes(assessment_ij)) + 
   geom_density() +
   facet_wrap(~is.na(popularity_ij), nrow = 2)
+ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
+  geom_boxplot() +
+  facet_wrap(~ M_outcome, nrow = 2)
 
 # add case with missing teacher assessment and teacher experience
 popular_MAR[2, c("experience_j", "assessment_ij")] <- NA
