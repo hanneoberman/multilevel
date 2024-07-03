@@ -76,16 +76,30 @@ popular_MAR <- split(popular, ~cluster_id) |>
     )$amp)
 # evaluate missing data pattern
 plot_pattern(popular_MAR)
-# induce univeriate MAR in outcome based on extraversion
-M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$assessment_ij))
-popular_MAR[as.logical(M_outcome), c("popularity_ij")] <- NA
-plot_pattern(popular_MAR)
-ggmice(popular_MAR, aes(assessment_ij)) + 
-  geom_density() +
-  facet_wrap(~is.na(popularity_ij), nrow = 2)
+# # induce univariate MAR in gender based on outcome
+# M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$popularity_ij))
+# popular_MAR[as.logical(M_outcome), c("gender_ij")] <- NA
+# plot_pattern(popular_MAR)
+# ggmice(popular_MAR, aes(as.factor(gender_ij))) + 
+#   geom_bar() +
+#   facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
+# ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
+#   geom_boxplot() +
+#   facet_wrap(~ M_outcome, nrow = 2)
+# induce univariate MAR in outcome based on extraversion
+ggmice(popular_MAR, aes(extraversion_ij, popularity_ij)) +
+  geom_point() + 
+  geom_smooth(se = FALSE, method = "lm")
+M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$popularity_ij))
 ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
   geom_boxplot() +
   facet_wrap(~ M_outcome, nrow = 2)
+popular_MAR[as.logical(M_outcome), c("extraversion_ij")] <- NA
+plot_pattern(popular_MAR)
+
+ggmice(popular_MAR, aes(extraversion_ij)) + 
+  geom_bar(fill = "white") +
+  facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
 
 # add case with missing teacher assessment and teacher experience
 popular_MAR[2, c("experience_j", "assessment_ij")] <- NA
