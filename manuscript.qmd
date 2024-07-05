@@ -865,6 +865,14 @@ pool(mod_imp_predictors) |> tidy(conf.int = TRUE)
 mitml::testEstimates(as.mitml.result(mod_imp_predictors), extra.pars = TRUE)
 ```
 
+For many explanatory variables, a large part of the variance is due to the missingness. For example, the relative increase in variance compared to the sampling variance for the effect of gender is more than 90%. This means that there is a lot of uncertainty in the estimate of the effect. We could increase the number of imputations.
+
+```{r}
+# #this code does not add imputations, only iterations. should there be an argument to add imputations?
+# mice.mids(imp, m = 15, printFlag = FALSE)
+```
+
+
 Model with explanatory variables, extraversion slope random.
 
 ```{r}
@@ -929,19 +937,31 @@ mod_imp_interaction <- with(
   lmer(
     popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
       extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id),  
-    REML = FALSE, 
-    control = lmerControl(optimizer = "bobyqa"))
+    REML = FALSE)
   ) 
 ```
 
 Does not converge. Use `nmle` again.
+```{r, echo=TRUE, eval=FALSE}
+mod_imp_interaction <- with(
+  imp,
+  lme(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j +
+      extraversion_ij:experience_j, 
+    random = ~extraversion_ij | cluster_id))
+```
+
+Does not converge either. Add iterations.
 ```{r}
 mod_imp_interaction <- with(
   imp,
   lme(
     popularity_ij ~ gender_ij + extraversion_ij + experience_j +
       extraversion_ij:experience_j, 
-    random = ~ 1  + extraversion_ij | cluster_id))
+    random = ~extraversion_ij | cluster_id,
+    control = lmeControl(maxIter = 100)
+    )
+  )
 ```
 
 ```{r}
@@ -956,10 +976,10 @@ mitml::testEstimates(as.mitml.result(mod_imp_interaction), extra.pars = TRUE)
 
 ```{r}
 est_true <-
-  mod_true_interaction |> tidy() |> select(term, true = estimate)
+  mod_true_interaction |> tidy() |> select(term, true = estimate, true_se = std.error)
 est_cca <- 
-  mod_cca_interaction |> tidy() |> select(cca = estimate)
-est_imp <- pool(mod_imp_interaction) |> tidy() |> select(imp = estimate)
+  mod_cca_interaction |> tidy() |> select(cca = estimate, cca_se = std.error)
+est_imp <- pool(mod_imp_interaction) |> tidy() |> select(imp = estimate, imp_se = std.error)
 cbind(est_true[1:5,], est_cca[1:5,], est_imp)
 ```
 
