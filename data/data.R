@@ -69,7 +69,7 @@ frequency <- c(0.6, 0.15, 0.2, 0.05)
 popular_MAR <- split(popular, ~cluster_id) |>
   purrr::map_dfr(~ampute(
     .x, 
-    prop = 0.2, 
+    prop = 0.1, 
     patterns = patterns,
     freq = frequency,
     mech = "MAR"
@@ -90,7 +90,7 @@ plot_pattern(popular_MAR)
 ggmice(popular_MAR, aes(extraversion_ij, popularity_ij)) +
   geom_point() + 
   geom_smooth(se = FALSE, method = "lm")
-M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$popularity_ij))
+M_outcome <- rbinom(nrow(popular), size = 1, prob = abs(normalize(popular$popularity_ij) - 0.1))
 ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
   geom_boxplot() +
   facet_wrap(~ M_outcome, nrow = 2)

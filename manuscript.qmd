@@ -583,7 +583,7 @@ pred["popularity_ij", "experience_j"] <- 1
 There are no cluster-level interactions required either, but there is a cross-level interaction implied by the analytic model. We will use passive imputation to impute the interaction effect for extraversion and experience. This is done by adding an empty column to the data for the interaction term and letting `mice` calculate the interaction effect on the fly. 
 
 ```{r}
-dat$extraversion_experience <- NA
+dat$extraversion_experience <- dat$extraversion_ij * dat$experience_j
 ```
 
 We need to edit the methods vector to accommodate this additional variable. Set the imputation method for the interaction term to passive imputation.
@@ -811,7 +811,7 @@ ggmice(imp, aes(extraversion_experience, group = .imp)) +
 <!-- ``` -->
 
 
-### Analyze imputed data
+## Analyze imputed data
 
 After successful imputation, we can analyze the imputed data and pool the results for further analysis.
 
@@ -892,6 +892,28 @@ mod_imp_randomslope <- with(
 A different optimizer or extra iterations do not help. 
 
 ```{r}
+mod_imp_randomslope <- with(
+  imp,
+  lmer(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
+      (1  + extraversion_ij | cluster_id), 
+    control = lmerControl(optCtrl = list(maxfun = 2e5)), REML = FALSE
+    )
+  )
+```
+
+Still no convergence. Use different mixed modeling technique.
+
+```{r}
+library(nlme)
+mod_imp_randomslope <- with(
+  imp,
+  lme(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j, 
+    random = ~ 1  + extraversion_ij | cluster_id))
+```
+
+```{r}
 pool(mod_imp_randomslope) |> tidy(conf.int = TRUE)
 ```
 
@@ -899,7 +921,7 @@ pool(mod_imp_randomslope) |> tidy(conf.int = TRUE)
 mitml::testEstimates(as.mitml.result(mod_imp_randomslope), extra.pars = TRUE)
 ```
 
-#### Model with with cross-level interaction
+Model with with cross-level interaction
 
 ```{r}
 mod_imp_interaction <- with(
@@ -912,6 +934,16 @@ mod_imp_interaction <- with(
   ) 
 ```
 
+Does not converge. Use `nmle` again.
+```{r}
+mod_imp_interaction <- with(
+  imp,
+  lme(
+    popularity_ij ~ gender_ij + extraversion_ij + experience_j +
+      extraversion_ij:experience_j, 
+    random = ~ 1  + extraversion_ij | cluster_id))
+```
+
 ```{r}
 pool(mod_imp_interaction) |> tidy(conf.int = TRUE)
 ```
@@ -919,6 +951,19 @@ pool(mod_imp_interaction) |> tidy(conf.int = TRUE)
 ```{r, echo=TRUE}
 mitml::testEstimates(as.mitml.result(mod_imp_interaction), extra.pars = TRUE)
 ```
+
+## Compare estimates
+
+```{r}
+est_true <-
+  mod_true_interaction |> tidy() |> select(term, true = estimate)
+est_cca <- 
+  mod_cca_interaction |> tidy() |> select(cca = estimate)
+est_imp <- pool(mod_imp_interaction) |> tidy() |> select(imp = estimate)
+cbind(est_true[1:5,], est_cca[1:5,], est_imp)
+```
+
+The estimates after imputation are more biased than the CCA estimates after list-wise deletion.
 
 # Discussion
 
