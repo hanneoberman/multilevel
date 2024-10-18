@@ -13,7 +13,7 @@ format:
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(knitr)
 # print everything as kable ----
-knit_print.data.frame <- function (x, options, ...) {
+knit_print.data.frame <- function(x, options, ...) {
   knitr::kable(x) |> knitr::knit_print(options, ...)
 }
 registerS3method("knit_print", "data.frame", knit_print.data.frame)
@@ -107,12 +107,13 @@ Multiple imputation (Rubin, 1987) has some benefits over single imputation:
 - it accounts for missing data uncertainty
 - it accounts for parameter uncertainty
 - can yield valid inference without additional adjustments 
+:::
 
 ## Analysis of imputed data
 After the imputation process is complete, the imputed datasets can be analyzed using standard statistical methods. Van Buuren (2020) provides the following schematic overview of the multiple imputation data analysis pipeline.
 
 ![](https://stefvanbuuren.name/fimd/fig/ch01-miflow-1.png){width=80%}
-:::
+
 
 The `mice` algorithm was initially designed as a fully conditional specification (FCS) algorithm, which is a type of imputation algorithm that imputes each variable separately, one-by-one, conditional on all other variables in the dataset. The FCS algorithm is based on the idea that imputing each variable separately allows for more flexibility than imputing all variables simultaneously. The rationale behind this thought is that in `mice`, each incomplete feature in the data can be addressed by a separate imputation model, which can be tailored to the specific characteristics of the feature. An efficient sufficient set of predictors can be chosen for each model, to further optimize the imputation process. 
 
@@ -257,6 +258,7 @@ library(dplyr)        # for data wrangling
 library(lme4)         # for multilevel modeling
 library(broom)        # for tidying model output
 library(broom.mixed)  # for tidying model output
+library(sjPlot)       # for results tables
 ```
 
 Load the complete data.
@@ -339,6 +341,10 @@ mod_true_interaction <- lmer(
 mod_true_interaction |> tidy(conf.int = TRUE)
 ```
 
+```{r}
+tab_model(mod_true_intercept, mod_true_predictors, mod_true_randomslope, mod_true_interaction)
+```
+
 ## Complete-case analysis
 
 Sequentially fit multilevel models to the incomplete data to obtain the parameter estimates after list-wise deletion.
@@ -407,7 +413,9 @@ mod_cca_interaction <- lmer(
 mod_cca_interaction |> tidy(conf.int = TRUE)
 ```
 
-
+```{r}
+tab_model(mod_cca_intercept, mod_cca_predictors, mod_cca_randomslope, mod_cca_interaction)
+```
 <!-- 1.	Inspect incomplete data -->
 <!-- a.	Explore variables: determine imputation methods with str() and ggmice(),  -->
 <!-- b.	If necessary, add variables for polynomial terms -->
@@ -1005,6 +1013,10 @@ pool(mod_imp_interaction) |> tidy(conf.int = TRUE)
 
 ```{r, echo=TRUE}
 mitml::testEstimates(as.mitml.result(mod_imp_interaction), extra.pars = TRUE)
+```
+
+```{r}
+# tab_model(mod_imp_intercept, mod_imp_predictors, mod_imp_randomslope, mod_imp_interaction)
 ```
 
 ## Compare estimates
