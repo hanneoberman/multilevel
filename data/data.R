@@ -2,8 +2,14 @@
 set.seed(123)
 library(haven)
 library(mice)
+library(ggmice)
 library(ggplot2)
+library(lme4)
 theme_set(theme_classic())
+# function to normalize a variable to a range between 0 and 0.5
+normalize <- function(x) {
+  0.5 * (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
 
 # complete data
 popular <- haven::read_sav("data/popular2.sav") |> 
@@ -52,23 +58,48 @@ save(popular, file = "data/popular.RData")
 
 # incomplete data
 set.seed(234)
+# induce multivariate MAR
 names(popular)
 patterns <- rbind(
-  c(1, 1, 0, 1, 1, 1, 1),
+  c(1, 1, 0, 1, 0, 1, 1),
   c(1, 1, 0, 1, 0, 1, 1),
   c(1, 1, 0, 1, 0, 1, 0),
   c(1, 1, 0, 1, 1, 1, 0))
-frequency <- c(0.5, 0.15, 0.3, 0.05)
+frequency <- c(0.6, 0.15, 0.2, 0.05)
 popular_MAR <- split(popular, ~cluster_id) |>
   purrr::map_dfr(~ampute(
     .x, 
-    prop = 0.4, 
+    prop = 0.1, 
     patterns = patterns,
     freq = frequency,
     mech = "MAR"
     )$amp)
 # evaluate missing data pattern
-md.pattern(popular_MAR)
+plot_pattern(popular_MAR)
+# # induce univariate MAR in gender based on outcome
+# M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$popularity_ij))
+# popular_MAR[as.logical(M_outcome), c("gender_ij")] <- NA
+# plot_pattern(popular_MAR)
+# ggmice(popular_MAR, aes(as.factor(gender_ij))) + 
+#   geom_bar() +
+#   facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
+# ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
+#   geom_boxplot() +
+#   facet_wrap(~ M_outcome, nrow = 2)
+# induce univariate MAR in outcome based on extraversion
+ggmice(popular_MAR, aes(extraversion_ij, popularity_ij)) +
+  geom_point() + 
+  geom_smooth(se = FALSE, method = "lm")
+M_outcome <- rbinom(nrow(popular), size = 1, prob = abs(normalize(popular$popularity_ij) - 0.1))
+ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
+  geom_boxplot() +
+  facet_wrap(~ M_outcome, nrow = 2)
+popular_MAR[as.logical(M_outcome), c("extraversion_ij")] <- NA
+plot_pattern(popular_MAR)
+
+ggmice(popular_MAR, aes(extraversion_ij)) + 
+  geom_bar(fill = "white") +
+  facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
 
 # add case with missing teacher assessment and teacher experience
 popular_MAR[2, c("experience_j", "assessment_ij")] <- NA
@@ -77,7 +108,7 @@ index <- floor(popular$popularity_ij) <= min(floor(popular$popularity_ij))
 popular_MAR[index, "gender_ij"] <- NA
 
 # evaluate missing data pattern
-md.pattern(popular_MAR)
+plot_pattern(popular_MAR)
 
 # save as RData
 save(popular_MAR, file = "data/popular_MAR.RData")
@@ -89,9 +120,8 @@ lm(popularity_ij ~ 1, data = popular_MAR)
 lmer(popularity_ij ~ (1 | cluster_id), data = popular_MAR, REML = FALSE)
 lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1 | cluster_id), data = popular_MAR, REML = FALSE)
 lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + (1  + extraversion_ij | cluster_id), data = popular_MAR, REML = FALSE)
-# does not converge
 lmer(popularity_ij ~ gender_ij + extraversion_ij + experience_j + extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id), data = popular_MAR, REML = FALSE)
-# is singular
+# does not converge
 
 # imputation
 pred <- quickpred(popular_MAR)
