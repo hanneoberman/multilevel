@@ -258,6 +258,7 @@ library(dplyr)        # for data wrangling
 library(lme4)         # for multilevel modeling
 library(broom)        # for tidying model output
 library(broom.mixed)  # for tidying model output
+library(performance)  # for model diagnostics
 library(sjPlot)       # for results tables
 ```
 
@@ -300,6 +301,12 @@ mod_true_intercept <- lmer(
 
 ```{r}
 mod_true_intercept |> tidy(conf.int = TRUE)
+```
+
+Compute ICC
+
+```{r}
+icc(mod_true_intercept)
 ```
 
 ```{r}
@@ -345,6 +352,13 @@ mod_true_interaction |> tidy(conf.int = TRUE)
 tab_model(mod_true_intercept, mod_true_predictors, mod_true_randomslope, mod_true_interaction)
 ```
 
+Visualize between-cluster variability
+```{r}
+ggmice(popular, aes(x = extraversion_ij, y = popularity_ij, group = cluster_id)) + 
+  geom_jitter() + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
 ## Complete-case analysis
 
 Sequentially fit multilevel models to the incomplete data to obtain the parameter estimates after list-wise deletion.
@@ -371,6 +385,11 @@ mod_cca_intercept <- lmer(
 
 ```{r}
 mod_cca_intercept |> tidy(conf.int = TRUE)
+```
+
+Compute ICC
+```{r}
+icc(mod_cca_intercept)
 ```
 
 ```{r}
@@ -416,6 +435,15 @@ mod_cca_interaction |> tidy(conf.int = TRUE)
 ```{r}
 tab_model(mod_cca_intercept, mod_cca_predictors, mod_cca_randomslope, mod_cca_interaction)
 ```
+
+Visualize between-cluster variability
+```{r}
+ggmice(dat, aes(x = extraversion_ij, y = popularity_ij, group = cluster_id)) + 
+  geom_jitter() + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+
 <!-- 1.	Inspect incomplete data -->
 <!-- a.	Explore variables: determine imputation methods with str() and ggmice(),  -->
 <!-- b.	If necessary, add variables for polynomial terms -->
@@ -887,6 +915,13 @@ pool(mod_imp_intercept) |> tidy(conf.int = TRUE)
 ```{r, echo=TRUE}
 mitml::testEstimates(as.mitml.result(mod_imp_intercept), extra.pars = TRUE)
 ```
+
+Compute ICC.
+```{r}
+purrr::map(mod_imp_intercept$analyses, ~{icc(.x)})
+```
+
+The ICC is (much) lower.
 
 Model with explanatory variables.
 
