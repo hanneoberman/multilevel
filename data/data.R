@@ -66,14 +66,20 @@ patterns <- rbind(
   c(1, 1, 0, 1, 0, 1, 0),
   c(1, 1, 0, 1, 1, 1, 0))
 frequency <- c(0.6, 0.15, 0.2, 0.05)
-popular_MAR <- split(popular, ~cluster_id) |>
-  purrr::map_dfr(~ampute(
-    .x, 
-    prop = 0.1, 
-    patterns = patterns,
-    freq = frequency,
-    mech = "MAR"
-    )$amp)
+# popular_MAR <- split(popular, ~cluster_id) |>
+#   purrr::map_dfr(~ampute(
+#     .x, 
+#     prop = 0.05, 
+#     patterns = patterns,
+#     freq = frequency,
+#     mech = "MAR"
+#     )$amp)
+popular_MAR <- ampute(popular,
+      prop = 0.1,
+      patterns = patterns,
+      freq = frequency,
+      mech = "MAR"
+      )$amp
 # evaluate missing data pattern
 plot_pattern(popular_MAR)
 # # induce univariate MAR in gender based on outcome
@@ -103,9 +109,9 @@ ggmice(popular_MAR, aes(extraversion_ij)) +
 
 # add case with missing teacher assessment and teacher experience
 popular_MAR[2, c("experience_j", "assessment_ij")] <- NA
-# add cases with missing gender for kids with low popularity
-index <- floor(popular$popularity_ij) <= min(floor(popular$popularity_ij))
-popular_MAR[index, "gender_ij"] <- NA
+# add cases with missing popularity for boys only
+index <- sample(which(popular_MAR$gender_ij == 1), 20)
+popular_MAR[index, "popularity_ij"] <- NA
 
 # evaluate missing data pattern
 plot_pattern(popular_MAR)

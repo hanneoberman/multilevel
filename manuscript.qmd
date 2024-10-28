@@ -733,7 +733,7 @@ pred
 
 The imputation models can be visualized as follows.
 ```{r}
-plot_pred(pred, meth = meth)
+plot_pred(pred, meth = meth, square = FALSE, rotate = TRUE)
 ```
 
 ## Run imputation algorithm
@@ -746,7 +746,7 @@ Impute the data using the specified imputation methods and predictor matrix.
 ```{r, eval=FALSE}
 imp <- mice(
   dat, 
-  m = 1, 
+  m = 10, 
   method = meth, 
   predictorMatrix = pred,
   maxit = 1)
@@ -758,6 +758,7 @@ Does not run. Set imputation method for experience to `2lonly.mean` and re-run.
 meth["experience_j"] <- "2lonly.mean"
 imp <- mice(
   dat, 
+  m = 10, 
   method = meth, 
   predictorMatrix = pred,
   maxit = 1,
@@ -769,6 +770,7 @@ This solves the issue in imputing teacher experience. Now edit the method for ge
 meth["gender_ij"] <- "2l.pmm"
 imp <- mice(
   dat, 
+  m = 10, 
   method = meth, 
   predictorMatrix = pred,
   maxit = 1,
