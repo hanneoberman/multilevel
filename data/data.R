@@ -40,9 +40,9 @@ popular <- popular[, c("unit_id", "cluster_id", "popularity_ij", "gender_ij", "e
 # popular[1, "experience_j"] <- 4
 
 # visualize outcome per cluster
-ggplot(popular, aes(popularity_ij, color = as.factor(cluster_id))) + 
+ggplot(popular, aes(popularity_ij, group = as.factor(cluster_id))) + 
   geom_density()
-ggplot(popular, aes(assessment_ij, popularity_ij, color = as.factor(cluster_id))) + 
+ggplot(popular, aes(assessment_ij, popularity_ij, group = as.factor(cluster_id))) + 
   geom_point() + 
   geom_smooth(se = FALSE, method = "lm")
 
@@ -75,11 +75,13 @@ frequency <- c(0.6, 0.15, 0.2, 0.05)
 #     mech = "MAR"
 #     )$amp)
 popular_MAR <- ampute(popular,
-      prop = 0.1,
+      prop = 0.15,
       patterns = patterns,
       freq = frequency,
-      mech = "MAR"
+      mech = "MAR", type = "RIGHT"
       )$amp
+# convert gender to factor
+popular_MAR$gender_ij <- factor(popular_MAR$gender_ij, levels = c(1, 2), labels = c("boy", "girl"))
 # evaluate missing data pattern
 plot_pattern(popular_MAR)
 # # induce univariate MAR in gender based on outcome
@@ -108,10 +110,10 @@ ggmice(popular_MAR, aes(extraversion_ij)) +
   facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
 
 # add case with missing teacher assessment and teacher experience
-popular_MAR[2, c("experience_j", "assessment_ij")] <- NA
-# add cases with missing popularity for boys only
-index <- sample(which(popular_MAR$gender_ij == 1), 20)
-popular_MAR[index, "popularity_ij"] <- NA
+popular_MAR[2, c("gender_ij", "experience_j", "assessment_ij")] <- NA
+# add cases with missing extraversion for boys only
+index <- sample(which(popular_MAR$gender_ij == "boy"), 20)
+popular_MAR[index, "extraversion_ij"] <- NA
 
 # evaluate missing data pattern
 plot_pattern(popular_MAR)

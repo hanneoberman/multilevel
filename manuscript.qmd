@@ -1,6 +1,7 @@
 ---
 title: "Imputation of incomplete multilevel data"
 author: "Hanne Oberman and Gerko Vink"
+cache: true
 format:
   html:
     toc: true
@@ -26,7 +27,7 @@ Multilevel data are clustered data structures, for example with students cluster
 
 The procedure of multilevel modeling can be complicated, especially in the presence of missing values. If there are missing entries in multilevel data, even the null-model cannot be estimated. That is why statistical software often defaults to ignoring any incomplete rows in the data. This method, known as ‘list-wise deletion’, allows the analyst to estimate statistical models on the subset of complete cases in the data. However, ignoring incomplete cases assumes that the complete cases are representative of the entire sample. If there is a difference between complete and incomplete cases, complete-case analysis will yield biased results (REF: van Buuren). Moreover, with multilevel data structures, missingness can occur at the unit-level (i.e., incomplete cases), but also at the cluster-level (i.e., incomplete or entirely unobserved cluster-level variables). For example, [missing test results for one student in one school is sporadic unit-level missingness, missing hospital size for all patients in one hospital is systematic cluster-level missingness]. If the observations for a variable are systematically missing in a certain cluster, none of the units in this cluster can be included in the analysis of scientific interest after list-wise deletion. Complete-case analysis then is a wasteful way to accommodate missing data, and may even further bias the analysis results. Hence, the default method to handle missingness in multilevel data is not appropriate.
 
-A more appropriate way to handle missingness in multilevel is to impute (i.e., fill in) every missing data entry multiple times. With multiple imputation, several completed versions of the incomplete data are created, which can be analyzed as if the data were complete. The resulting statistics can then be pooled according to Rubin’s rules (REF: Rubin). Since the analysis results may vary across imputations, pooled estimates will reflect the uncertainty due to non-response. Multiple imputation has been established as a statistically valid all-round method to deal with incomplete data.
+A more appropriate way to accommodate missingness in multilevel data is to impute (i.e., fill in) every missing data entry multiple times. With multiple imputation, several completed versions of the incomplete data are created, which can be analyzed as if the data were complete. The resulting statistics can then be pooled according to Rubin’s rules (REF: Rubin). Since the analysis results may vary across imputations, pooled estimates will reflect the uncertainty due to non-response. Multiple imputation has been established as a statistically valid all-round method to deal with incomplete data.
 
 This tutorial focuses on one ‘flavor’ of multiple imputation: multiple imputation by chained equations (MICE) as implemented in the popular `R` package {`mice`}. MICE is an algorithmic approach to fill in missing data entries on a variable-by-variable basis. That means that for every incomplete variable in the data, an imputation model should be chosen. This imputation model should be congenial (i.e., statistically matching) the analysis model one is intending to fit after treating the missingness. There is no encompassing imputation model (‘joint model’) required. The flexibility that this approach gives, may also be a disadvantage. If it is not clear at the imputation stage what the final analysis model will be at the multilevel modeling stage, it may be difficult to select appropriate imputation models. Each imputation model should therefore be compatible with the broadest multilevel model the analyst is intending to fit after imputation. In this tutorial, we will outline how to build imputation models that are in line with the multilevel structure in the data.  
 
@@ -237,14 +238,15 @@ Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. t
 <!--   - If necessary, increase $m$ and re-impute -->
 <!-- 10. For further multilevel model building, AICs could be pooled, how? -->
 
-The most general analytic model to be applied to imputed data (Hox et al, 2018, p. 17, equation 2.12).
+The most general analytic model to be applied to imputed data (Hox et al, 2018, p. 13).
 
 \begin{align}
 \text{popularity}_{ij} = &\gamma_{00}+ \gamma_{10} \text{gender}_{ij} + \gamma_{20} \text{extraversion}_{ij} + \\
-&\gamma_{01} \text{experience}_j + \gamma_{21} \text{extraversion}_{ij} \times \text{experience}_j + \\
+&\gamma_{01} \text{experience}_j + u_{1j} \text{gender}_{ij} + \\
 &u_{2j} \text{extraversion}_{ij} + u_{0j}+ e_{ij} 
 \end{align}
 
+TODO: change this to model without interaction!
 <!-- u_{1j} \text{gender}_{ij} +  -->
 
 Setup `R` environment
@@ -335,21 +337,18 @@ mod_true_randomslope <- lmer(
 mod_true_randomslope |> tidy(conf.int = TRUE)
 ```
 
-```{r}
-mod_true_interaction <- lmer(
-  popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
-    extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id), 
-  data = popular, 
-  REML = FALSE
-  )
-```
 
 ```{r}
-mod_true_interaction |> tidy(conf.int = TRUE)
-```
-
-```{r}
-tab_model(mod_true_intercept, mod_true_predictors, mod_true_randomslope, mod_true_interaction)
+tab_model(
+  mod_true_singlelevel,
+  mod_true_intercept,
+  mod_true_predictors,
+  mod_true_randomslope,
+  dv.labels = "",
+  show.dev = TRUE, 
+  show.ci = FALSE, 
+  show.r2 = FALSE
+)
 ```
 
 Visualize between-cluster variability
@@ -405,7 +404,6 @@ mod_cca_predictors <- lmer(
 mod_cca_predictors |> tidy(conf.int = TRUE)
 ```
 
-
 ```{r}
 mod_cca_randomslope <- lmer(
   popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
@@ -419,21 +417,19 @@ mod_cca_randomslope <- lmer(
 mod_cca_randomslope |> tidy(conf.int = TRUE)
 ```
 
-```{r}
-mod_cca_interaction <- lmer(
-  popularity_ij ~ gender_ij + extraversion_ij + experience_j +
-    extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id),
-  data = dat,
-  REML = FALSE
-  )
-```
+
 
 ```{r}
-mod_cca_interaction |> tidy(conf.int = TRUE)
-```
-
-```{r}
-tab_model(mod_cca_intercept, mod_cca_predictors, mod_cca_randomslope, mod_cca_interaction)
+tab_model(
+  mod_cca_singlelevel,
+  mod_cca_intercept,
+  mod_cca_predictors,
+  mod_cca_randomslope,
+  dv.labels = "",
+  show.dev = TRUE, 
+  show.ci = FALSE, 
+  show.r2 = FALSE
+)
 ```
 
 Visualize between-cluster variability
@@ -443,6 +439,7 @@ ggmice(dat, aes(x = extraversion_ij, y = popularity_ij, group = cluster_id)) +
   geom_smooth(method = "lm", se = FALSE)
 ```
 
+## Inspect incomplete data
 
 <!-- 1.	Inspect incomplete data -->
 <!-- a.	Explore variables: determine imputation methods with str() and ggmice(),  -->
@@ -464,7 +461,6 @@ ggmice(dat, aes(x = extraversion_ij, y = popularity_ij, group = cluster_id)) +
 <!-- d.	If necessary, add imputations -->
 <!-- 5.	Interpret results and report -->
 
-## Inspect incomplete data
 
 ### Explore observed data
 
@@ -540,17 +536,17 @@ dat |>
     facet_wrap(~cluster_id)
 ```
 
-The variable is not normally distributed within clusters. We will use `2l.pmm`: a semi-parametric multilevel method using the linear mixed model with homogeneous error variances. 
+The variable is not truly normally distributed within clusters.  We will still use `2l.norm` to impute the missing values.
 
 ```{r}
-meth["popularity_ij"] <- "2l.pmm"
+meth["popularity_ij"] <- "2l.norm"
 ```
 
 #### Gender
 
 The unit-level predictor variable 'gender' is dichotomous. 
 ```{r}
-ggmice(dat, aes(as.factor(gender_ij))) + 
+ggmice(dat, aes(gender_ij)) + 
   geom_bar(position = "stack", fill = "white")
 ```
 
@@ -568,7 +564,7 @@ ggmice(dat, aes(extraversion_ij)) +
   geom_histogram(fill = "white")
 ```
 
-We will use `2l.pmm` for this variable too.
+We will use `2l.pmm` for this variable: a semi-parametric multilevel method using the linear mixed model with homogeneous error variances.
 ```{r}
 meth["extraversion_ij"] <- "2l.pmm"
 ```
@@ -651,34 +647,7 @@ There are no unit-level interactions in the analytic model, so we will continue 
 pred["popularity_ij", "experience_j"] <- 1
 ```
 
-There are no cluster-level interactions required either, but there is a cross-level interaction implied by the analytic model. We will use passive imputation to impute the interaction effect for extraversion and experience. This is done by adding an empty column to the data for the interaction term and letting `mice` calculate the interaction effect on the fly. 
-
-```{r}
-dat$extraversion_experience <- dat$extraversion_ij * dat$experience_j
-```
-
-We need to edit the methods vector to accommodate this additional variable. Set the imputation method for the interaction term to passive imputation.
-```{r}
-meth["extraversion_experience"] <- "~ I(extraversion_ij * experience_j)"
-```
-
-Add the additional variable to the predictor matrix as well.
-```{r}
-pred <- rbind(pred, extraversion_experience = 0)
-pred <- cbind(pred, extraversion_experience = 0)
-```
-
-Further edit the predictor matrix so the interaction term is included in the imputation model for 'popularity'.
-```{r}
-pred["popularity_ij", "extraversion_experience"] <- 1
-```
-
-And finally, include a predictor related to the missingness and the target: the auxiliary variable teacher assessment. 
-```{r}
-pred["popularity_ij", "assessment_ij"] <- 1
-```
-
-The imputation model predictors for popularity now are as follows.
+Finally, there are no cluster-level or cross-level interactions required. The imputation model predictors for popularity now are as follows.
 ```{r}
 pred["popularity_ij", ]
 ```
@@ -749,9 +718,16 @@ imp <- mice(
   m = 10, 
   method = meth, 
   predictorMatrix = pred,
-  maxit = 1)
+  maxit = 1,
+  printFlag = FALSE)
 ```
 
+```
+Error in .imputation.level2(y = y, ry = ry, x = x, type = type, wy = wy,  : 
+  Method 2lonly.pmm found the following clusters with partially missing
+  level-2 data: 1
+  Method 2lonly.mean can fix such inconsistencies.
+```
 
 Does not run. Set imputation method for experience to `2lonly.mean` and re-run.
 ```{r}
@@ -765,7 +741,7 @@ imp <- mice(
   printFlag = FALSE)
 ```
 
-This solves the issue in imputing teacher experience. Now edit the method for gender.
+The model runs, but yields an error. Fix this by setting a different imputation method for gender.
 ```{r}
 meth["gender_ij"] <- "2l.pmm"
 imp <- mice(
@@ -776,6 +752,7 @@ imp <- mice(
   maxit = 1,
   printFlag = FALSE)
 ```
+
 
 This code runs! Add iterations to reach algorithmic convergence.
 ```{r}
@@ -862,17 +839,6 @@ ggmice(imp, aes(assessment_ij, group = .imp)) +
   geom_density()
 ```
 
-#### Interaction term
-
-```{r}
-ggmice(imp, aes(.imp, extraversion_experience)) + 
-  geom_jitter(height = 0)
-```
-
-```{r}
-ggmice(imp, aes(extraversion_experience, group = .imp)) + 
-  geom_density()
-```
 
 <!-- # Visualize -->
 
@@ -1009,62 +975,16 @@ pool(mod_imp_randomslope) |> tidy(conf.int = TRUE)
 mitml::testEstimates(as.mitml.result(mod_imp_randomslope), extra.pars = TRUE)
 ```
 
-Model with with cross-level interaction
-
-```{r}
-mod_imp_interaction <- with(
-  imp,
-  lmer(
-    popularity_ij ~ gender_ij + extraversion_ij + experience_j + 
-      extraversion_ij:experience_j + (1  + extraversion_ij | cluster_id),  
-    REML = FALSE)
-  ) 
-```
-
-Does not converge. Use `nmle` again.
-```{r, echo=TRUE, eval=FALSE}
-mod_imp_interaction <- with(
-  imp,
-  lme(
-    popularity_ij ~ gender_ij + extraversion_ij + experience_j +
-      extraversion_ij:experience_j, 
-    random = ~extraversion_ij | cluster_id))
-```
-
-Does not converge either. Add iterations.
-```{r}
-mod_imp_interaction <- with(
-  imp,
-  lme(
-    popularity_ij ~ gender_ij + extraversion_ij + experience_j +
-      extraversion_ij:experience_j, 
-    random = ~extraversion_ij | cluster_id,
-    control = lmeControl(maxIter = 100)
-    )
-  )
-```
-
-```{r}
-pool(mod_imp_interaction) |> tidy(conf.int = TRUE)
-```
-
-```{r, echo=TRUE}
-mitml::testEstimates(as.mitml.result(mod_imp_interaction), extra.pars = TRUE)
-```
-
-```{r}
-# tab_model(mod_imp_intercept, mod_imp_predictors, mod_imp_randomslope, mod_imp_interaction)
-```
 
 ## Compare estimates
 
 ```{r}
 est_true <-
-  mod_true_interaction |> tidy() |> select(term, true = estimate, true_se = std.error)
+  mod_true_randomslope |> tidy() |> select(term, true = estimate, true_se = std.error)
 est_cca <- 
-  mod_cca_interaction |> tidy() |> select(cca = estimate, cca_se = std.error)
-est_imp <- pool(mod_imp_interaction) |> tidy() |> select(imp = estimate, imp_se = std.error)
-cbind(est_true[1:5,], est_cca[1:5,], est_imp)
+  mod_cca_randomslope |> tidy() |> select(cca = estimate, cca_se = std.error)
+est_imp <- pool(mod_imp_randomslope) |> tidy() |> select(imp = estimate, imp_se = std.error)
+cbind(est_true[1:4,], est_cca[1:4,], est_imp)
 ```
 
 The estimates after imputation are more biased than the CCA estimates after list-wise deletion.
