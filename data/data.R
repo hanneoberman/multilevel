@@ -58,62 +58,77 @@ save(popular, file = "data/popular.RData")
 
 # incomplete data
 set.seed(234)
-# induce multivariate MAR
+# induce multivariate MAR univariately
 names(popular)
-patterns <- rbind(
-  c(1, 1, 0, 1, 0, 1, 1),
-  c(1, 1, 0, 1, 0, 1, 1),
-  c(1, 1, 0, 1, 0, 1, 0),
-  c(1, 1, 0, 1, 1, 1, 0))
-frequency <- c(0.6, 0.15, 0.2, 0.05)
-# popular_MAR <- split(popular, ~cluster_id) |>
-#   purrr::map_dfr(~ampute(
-#     .x, 
-#     prop = 0.05, 
-#     patterns = patterns,
-#     freq = frequency,
-#     mech = "MAR"
-#     )$amp)
-popular_MAR <- ampute(popular,
-      prop = 0.15,
-      patterns = patterns,
-      freq = frequency,
-      mech = "MAR", type = "RIGHT"
-      )$amp
-# convert gender to factor
-popular_MAR$gender_ij <- factor(popular_MAR$gender_ij, levels = c(1, 2), labels = c("boy", "girl"))
-# evaluate missing data pattern
-plot_pattern(popular_MAR)
-# # induce univariate MAR in gender based on outcome
-# M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$popularity_ij))
-# popular_MAR[as.logical(M_outcome), c("gender_ij")] <- NA
+
+
+
+# names(popular)
+# patterns <- rbind(
+#   c(1, 1, 0, 1, 0, 1, 1),
+#   c(1, 1, 0, 1, 0, 1, 1),
+#   c(1, 1, 0, 1, 0, 1, 0),
+#   c(1, 1, 0, 1, 1, 1, 0))
+# frequency <- c(0.6, 0.15, 0.2, 0.05)
+# # popular_MAR <- split(popular, ~cluster_id) |>
+# #   purrr::map_dfr(~ampute(
+# #     .x, 
+# #     prop = 0.05, 
+# #     patterns = patterns,
+# #     freq = frequency,
+# #     mech = "MAR"
+# #     )$amp)
+# popular_MAR <- ampute(popular,
+#       prop = 0.15,
+#       patterns = patterns,
+#       freq = frequency,
+#       mech = "MAR", type = "RIGHT"
+#       )$amp
+# # convert gender to factor
+# popular_MAR$gender_ij <- factor(popular_MAR$gender_ij, levels = c(1, 2), labels = c("boy", "girl"))
+# # evaluate missing data pattern
 # plot_pattern(popular_MAR)
-# ggmice(popular_MAR, aes(as.factor(gender_ij))) + 
-#   geom_bar() +
-#   facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
-# ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
-#   geom_boxplot() +
-#   facet_wrap(~ M_outcome, nrow = 2)
-# induce univariate MAR in outcome based on extraversion
-ggmice(popular_MAR, aes(extraversion_ij, popularity_ij)) +
-  geom_point() + 
-  geom_smooth(se = FALSE, method = "lm")
-M_outcome <- rbinom(nrow(popular), size = 1, prob = abs(normalize(popular$popularity_ij) - 0.1))
-ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
+# # # induce univariate MAR in gender based on outcome
+# # M_outcome <- rbinom(nrow(popular), size = 1, prob = normalize(popular$popularity_ij))
+# # popular_MAR[as.logical(M_outcome), c("gender_ij")] <- NA
+# # plot_pattern(popular_MAR)
+# # ggmice(popular_MAR, aes(as.factor(gender_ij))) + 
+# #   geom_bar() +
+# #   facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
+# # ggmice(cbind(popular, M_outcome), aes(popularity_ij)) + 
+# #   geom_boxplot() +
+# #   facet_wrap(~ M_outcome, nrow = 2)
+# # induce univariate MAR in outcome based on extraversion
+# ggmice(popular_MAR, aes(extraversion_ij, popularity_ij)) +
+#   geom_point() + 
+#   geom_smooth(se = FALSE, method = "lm")
+
+set.seed(22)
+popular_MAR <- popular
+# add case with missing gender, teacher assessment and teacher experience
+popular_MAR[2, c("gender_ij", "experience_j", "assessment_ij")] <- NA
+# add missingness in auxiliary variable
+M_experience <- rbinom(nrow(popular), size = 1, prob = normalize(max(popular$experience_j) - popular$experience_j))
+popular_MAR[as.logical(M_experience), "assessment_ij"] <- NA
+ggplot(popular_MAR, aes(is.na(assessment_ij), experience_j)) + 
+  geom_jitter() 
+# generate indicator for higher vs lower popylarity (with some noise)
+M_assess <- rbinom(nrow(popular), size = 1, prob = abs(normalize(popular$assessment_ij)))
+ggmice(cbind(popular, M_assess), aes(popularity_ij)) + 
   geom_boxplot() +
-  facet_wrap(~ M_outcome, nrow = 2)
-popular_MAR[as.logical(M_outcome), c("extraversion_ij")] <- NA
+  facet_wrap(~ M_assess, nrow = 2)
+popular_MAR[as.logical(M_assess), c("extraversion_ij", "popularity_ij")] <- NA
 plot_pattern(popular_MAR)
+# # add cases with missing popularity for boys only
+# M_gender <- sample(which(popular_MAR$gender_ij == "boy"), 30)
+# popular_MAR[M_gender, "popularity_ij"] <- NA
+# plot_pattern(popular_MAR)
+
 
 ggmice(popular_MAR, aes(extraversion_ij)) + 
   geom_bar(fill = "white") +
   facet_wrap(~is.na(popularity_ij), nrow = 2, scales = "free_y")
 
-# add case with missing teacher assessment and teacher experience
-popular_MAR[2, c("gender_ij", "experience_j", "assessment_ij")] <- NA
-# add cases with missing extraversion for boys only
-index <- sample(which(popular_MAR$gender_ij == "boy"), 20)
-popular_MAR[index, "extraversion_ij"] <- NA
 
 # evaluate missing data pattern
 plot_pattern(popular_MAR)
