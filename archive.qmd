@@ -1,0 +1,59 @@
+---
+title: "text dump"
+format: html
+---
+
+
+
+
+<!-- Fix cluster-level missingness determinately. -->
+```{r}
+# meth <- make.method(dat)
+# meth["experience_j"] <- "2lonly.mean"
+# meth[meth != "2lonly.mean"] <- ""
+# pred <- make.predictorMatrix(dat)
+# pred[] <- 0
+# pred[, "cluster_id"] <- -2
+# imp <- mice(
+#   popular_MAR, 
+#   m = 1, 
+#   method = meth, 
+#   predictorMatrix = pred,
+#   maxit = 1)
+# plot_pattern(complete(imp))
+```
+
+This procedure has fixed the missing experience value 
+
+Does not work if there are inconsistencies within clusters! But we can do this manually.
+
+```{r}
+# dat |>
+#   group_by(cluster_id) |>
+#   reframe(teacher_experience = unique(experience_j))
+```
+
+This shows us that in the first cluster teacher experience of 4 and 24 is recorded.
+
+```{r}
+# dat |>
+#   filter(cluster_id == 1) |>
+#   ggplot(aes(experience_j)) + geom_histogram()
+```
+
+For most pupils, teacher experience is 24. We can quite safely assume that the teacher experience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24. The following line of code sets the teacher experience of 4 manually as missing.
+
+```{r}
+# dat[dat$cluster_id == 1 & (is.na(dat$experience_j) | dat$experience_j == 4), "experience_j"] <- NA
+```
+
+```{r}
+# imp <- mice(
+#   popular_MAR, 
+#   m = 1, 
+#   method = meth, 
+#   predictorMatrix = pred,
+#   maxit = 1)
+# plot_pattern(complete(imp))
+```
+

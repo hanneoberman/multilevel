@@ -1,0 +1,200 @@
+---
+title: "Imputation of incomplete multilevel data"
+author: "Hanne Oberman and Gerko Vink"
+format:
+  html:
+    toc: true
+---
+
+<!-- This tutorial aims to serve analysts who know their way around multilevel modeling, but are not (as) familiar with missing data imputation. -->
+
+# Introduction
+This is a tutorial on multiple imputation of incomplete multilevel data with [mice]{.pkg} in [R]{.proglang}. But before we dive into the details and feel sorry for all the holes in our data, it is important to go a few steps back. Because it is not just holes in our data. Most often, there is more data than holes. And more data means more information. In this tutorial we frame your mind to consider the flow of that information in such a way that the multilevel structure is taken into account. In other words, we will show you how to solve for the incomplete data to fit your multilevel model. 
+
+Regardless of the type of model we are estimating, we need information for our model to be fit on. Some information we can see, such as the data we have collected. Other sources of information may be unavailable, such as missing values or cases that are not part of our data set. It can easily occur that the available information is not sufficient for our model to arrive at the correct conclusion. This is a common scenario in practice and extends far beyond the domain of mere missing values in data sets (see e.g. Hand 2020). In any case, when the available information is not sufficient, our standard modeling practices fall short and we need to adjust the model to arrive at the correct conclusion. 
+
+The concept of adjusting models is by itself quite intuitive. When we need to go from data to answer on a dataset that does not tell us everything, there are but three solutions: We can either append the data with the necessary unavailable information, adjust our modeling such that the necessary unavailable information is taken into account, or do both. In either way, some model is needed to solve for the incompleteness. 
+
+Modeling incomplete data sets, however, is not a trivial task. One needs to carefully make assumptions about the nature of the available and unavailable information and explicitly define the models that connect these two information sources. This tasks becomes increasingly challenging when the complexity of the modeling effort increases. For multilevel data sets this is especially the case, because the complexity of modeling can increase exponentially with every additional level. 
+
+In this tutorial we aim to provide a practical guide to imputing incomplete multilevel data. We will use the [R]{.proglang} package [mice]{.pkg} to illustrate the imputation process and demonstrate how it connects to a larger ecosystem of imputation and combination methods for incomplete multilevel data. 
+
+## Intended audience
+This tutorial is aimed at researchers and analysts who know their way around multilevel analyses, but lack the skills and expertise of dealing with incomplete sources of information. For them we will gently introduce, explain and demonstrate the necessary methodology and its application in [mice]{.pkg}. For applied researchers and analysts that are both unfamiliar with multilevel modeling and incomplete data analysis, we will try to be as complete as possible, but we may refer to other sources to complement our tutorial. 
+
+# Dealing with unavailable information
+First and foremost, the best way to deal with unavailable information is to make sure that you have none. This is in itself impossible to verify, as one would need the potentially unavailable information to definitively prove that there is no deviation from the conclusions obtained on the available information. Since this is impossible to do in practice, it is far more convenient to assume some model that relates the observed and unobserved parts in terms of the problem at hand. For such models, there are generally three scenarios that we need to consider.
+
+## Scenario 1: Missingness is independent of any information
+The first scenario is that analysis of the available information by itself yields the correct conclusion. This is an ideal scenario, but it is most likely not the case. Rubin (1987) defines this scenario as **missing completely at random** (MCAR). Hand (2020) defines this - perhaps more intuitively - as *not data dependent*. There is, however, a caveat with us using Hand's terminology, as the term *data dependent* may lull the reader into the false sense of security of assuming that data refers to the available data. While Hand is careful in making this distinction in his book, we would like to explicitly highlight the possibility that more data is always available, and that not considering this data may lead to incorrect conclusions. We therefore favor the explicit use of the term *missingness* in Rubin's terminology and like to stick with Rubin's MCAR in our text. 
+
+With MCAR, the missingness in the data is unrelated to any observed information (i.e. data points), nor to any unobserved information. In terms of classical statistics, this would mean that a random and sufficient sample from a population would be randomly incomplete in such a way that analysis of the complete cases would yield a sufficient statistic. You may recognize this as the age-old adage *"the sample is representative of the population"*, but now the sample is both representative and incomplete. The bottom line is that we can ignore the two missingness mechanisms that are at play here:
+
+1. First, the population has been sampled, meaning that the information that we have obtained is incomplete. Random sampling makes this mechanism ignorable and analyzing a sufficiently large sample will - in the limit - yield the same conclusion as analyzing the population itself. 
+2. Second, the sample is now incomplete. This incompleteness is also assumed to be random and thereby ignorable. In other words, we have merely obtained a smaller sample of the information than originally would have been intended. But analyzing this sample, given that it is still sufficiently large, will still yield the same conclusion as analyzing the population. 
+
+In terms of probability we could argue that with MCAR, the probability to be observed is the same for every obtained sequence of information. The complement, however, must also hold: the probability to be unobserved is the same for every unobtained sequence of information. We would like to note that this is a very strong assumption and is often not met in practice. We would also like to note that for structured data this does not mean that every cell has an equal probability to be unobserved. The distribution of random probabilities may change between columns in the data, for example, whilst still being fully random. But as long as this distribution is not related to the sampling, we can still assume that the data is MCAR.
+
+## Scenario 2: Missingness depends on available information
+This assumption is violated when the probability of being unobserved - or observed, for that matter - is dependent on more than one dimension in the available information. For example when the probability of being unobserved is dependent on the value of another variable in the data, we have a clear and proven deviation from MCAR. This would bring us to the second scenario: **missing at random (MAR)** (Rubin, 1976). With MAR the observed information holds the key to unlocking the missing information. In Hand's terminology, this would be *seen data dependent*. The difficulty here is that - unlike with MCAR, where the missingness mechanism may not be dependent on any observed nor unobserved data - with MAR, it may only be observed data dependent. 
+
+The observed data dependency of MAR is a very flexible assumption. It allows us to model the unobserved information based on the observed information. In simple terms, if we define a model for all unobserved information, based on all observed information and combine that model with the observed data model, we'd be able to draw correct conclusions. Bayesians would recognize this as a form of conditional probability, where the probability of the unobserved information is conditional on the observed information. Specifying a good prior for the unobserved information is crucial here, as it will determine the outcome of the model. Any sufficient prior will yield a correct posterior predictive distribution and, hence, a correct conclusion. The flexibility in the Bayesian approach is that it allows for straightforward seperation of the missingness and analysis problems for any scenario that is MAR.
+
+## Scenario 3: Missingness may also relate to unavailable information
+But what if your missingness is related to the data that you cannot see? This would mean that no matter what type of analysis you perform on the observed information, your conclusions would be invalid. This is the third scenario: **missing not at random (MNAR)** (Rubin, 1976). Hand (2020) defines this as *unseen data dependent*. This is the most difficult scenario to deal with, as it is impossible to model the missing information based on the observed information alone and some form of *adjustment* is needed to arrive at the correct conclusion.
+
+::: {.callout-note}
+# Distinguishing beteen missingness mechanisms. 
+Everyone who learns about missingness will at some point try to distinguish between the three mechanisms. This is a good exercise, but it is important to note that the distinction is not always clear nor possible. 
+
+Situations in which the missingness mechanism is certain are rare. If you lose one case file during data collection, you can argue that the missingness of that case is random and can therefore be ignored. But how does that relate to other missingness in the data set? Alternatively, for some data collection efforts it is known that the missingness is not ignorable. For example, when collecting blood pressure, there is often a clear reason why such information is (not) collected. The absense of blood pressure measurements may therefore indicate that there is no reason to assume and measure abnormal bloodpressure, increasing the likelihood of MNAR. Solving for missing blood pressure would then too much the observations and could easily lead to biased estimation of the effect. If mechanisms can be deduced from the context of a study, such mechanisms are extremely valuable in solving for the incomplete data.
+
+It becomes problematic when people aim to infer mechanisms from the data itself. Take for example a structured data set. If we determine that the missingness in one column depends on the observed values in another column, we may be tempted to conclude that the missingness is MAR. In our evaluation, however, we did not take into account that the missingness could also relate to itself, or that the missingness could relate to some outside source of the data. In any case, if we would model the missingness, it would not be hard to conceptualize another model that relates to unseen data and would have equal fit to the model that only relates to seen data. This has been clearly demonstrated by (molenberghs 2008). 
+
+Alternatively, we could argue the same for MCAR. The inability to distinguish both MAR and MCAR from MNAR based on the data alone, renders the many MCAR tests that are available in software futile. 
+:::
+
+1. missing data occur often in data with human subjects
+2. missing data may be resolved, but need to be handled in accordance with the analysis of scientific interest
+3. in human-subjects research, there is often clustering, which may be captured with multilevel modeling techniques
+4. if the analysis of scientific interest is a multilevel model, the missing data handling method should accommodate the multilevel structure of the data
+4. both missingness and multilevel structures require advanced statistical techniques
+5. this tutorial sets out to facilitate empirical researchers in accommodating both multilevel structures as well as missing data
+6. we illustrate the use of the software by means of a case study
+
+# Methods
+
+The [`R`]{.proglang} package [`mice`]{.pkg} provides a framework for imputing incomplete data on a variable-by-variable basis. The [`mice`]{.fct} function allows users to flexibly specify how many times and under what model the missing data should be imputed. This is reflected in the first four function arguments
+
+```r
+mice(data, m, method, predictorMatrix, ...)
+```
+
+where `data` refers to the incomplete dataset, `m` determines the number of imputations, `method` denotes the functional form of the imputation model per variable and `predictorMatrix` specifies the interrelational dependencies between the variables and imputation models (i.e., the set of predictors to be used for imputing each incomplete variable).
+
+The object supplied as `data` should be tabular (e.g. a `data.frame` with $n$ rows and $p$ variables, with missing values coded as `NA`). For multilevel imputation models, a numeric clustering variable is required. 
+
+The number of imputations `m` should be determined based on the severity of the missing data problem and the intended analysis model of substantive interest. Van Buuren (2018, $\S$ 2.8) suggests using the default `m = 5` for imputation model building, and to increase `m` as required after initial exploration.
+
+The `method` argument specifies the imputation method to be used for each column in data. If not supplied by the user, `method` defaults to convenient standard methods for single level continuous and categorical data. Since these do not take any clustering or multilevel structures into account, valid imputation of incomplete multilevel data will typically require a user-supplied methods vector. The tables 7.2, 7.3 and 7.4 in van Buuren (2018, $\S$ 7.6, $\S$ 7.7 and $\S$ 7.8, respectively) provide an overview of the available methods to perform univariate multilevel imputation.
+
+With the `predictorMatix` argument, `mice` users can define which columns should be used as predictors in each imputation model. The default predictor matrix is a square binary matrix with the variables to be imputed in the rows and the imputation model predictors in the columns. The default `predictorMatrix` will not be suitable for multilevel data. Univariate imputation methods for two-level data use other codes than `0` and `1`. In the predictor matrix, `-2` denotes the class variable, a value `1` indicates a fixed effect and a value `2` indicates a random effect. Additionally, the method `2l.pan` uses codes `3` and `4` to add class means to codes `1` and `2` respectively.
+
+<!-- 2l.bin, 2l.lmer, 2l.norm, 2l.pan, 2lonly.mean, 2lonly.norm and 2lonly.pmm use code -2 to indicate the class variable --> 
+<!-- -	2l.bin, 2l.lmer, 2l.norm and 2l.pan use code 2 to indicate the random effects -->
+<!-- -	2l.pan uses codes 3 and 4 to add class means to codes 1 and 2 respectively -->
+
+FIMD, section 7.10
+
+> Recipe for a level-1 target:
+1.	Define the most general analytic model to be applied to imputed data;
+2.	Select a 2l method that imputes close to the data;
+3.	Include all level-1 variables;
+4.	Include the disaggregated cluster means of all level-1 variables;
+5.	Include all level-1 interactions implied by the analytic model;
+6.	Include all level-2 predictors;
+7.	Include all level-2 interactions implied by the analytic model;
+8.	Include all cross-level interactions implied by the analytic model;
+9.	Include predictors related to the missingness and the target;
+10.	Exclude any terms involving the target
+
+> Recipe for a level-2 target:
+1.	Define the most general analytic model to be applied to imputed
+data;
+2.	Select a 2lonly method that imputes close to the data;
+3.	Include the cluster means of all level-1 variables;
+4.	Include the cluster means of all level-1 interactions;
+5.	Include all level-2 predictors;
+6.	Include all interactions of level-2 variables;
+7.	Include predictors related to the missingness and the target;
+8.	Exclude any terms involving the target
+
+# Case study
+
+Prerequisites: incomplete dataset and known multilevel modeling strategy (i.e. the most general analytic model to be applied to imputed data), plus an assumed missingness mechanism. This tutorial assumes M(C)AR, for MNAR see Munoz et al.
+
+1. Load the data, make sure the variables are correctly formatted (e.g. numeric clustering variable)
+2. Explore the missingness
+2. Fix any cluster-level missingness determinately (note that `2l.only` methods do not work if there are inconsistencies, fix those first!)
+2. Re-evaluate the missingness
+3. Explore bivariate relations and associations with missingness indicators (optionally test the associations?)
+4. For each incomplete variable:
+  - Determine the imputation method
+  - Choose imputation model predictors (see recipe)
+5. Set methods vector and predictor matrix
+6. Impute the incomplete data
+6. If error...
+6. After successful run:
+  - Evaluate convergence
+  - Evaluate imputations
+9. Analyze and pool
+9. If error... (e.g. rescale variables by converting imputations to long format, mutate, then back to mids)
+10. For further multilevel model building, AICs could be pooled, how?
+
+The most general analytic model to be applied to imputed data (Hox et al, 2018).
+
+\begin{align}
+\text{popularity}_{ij} = &\gamma_{00}+ \gamma_{10} \text{gender}_{ij} + \gamma_{20} \text{extraversion}_{ij} + \\
+&\gamma_{01} \text{experience}_j + \gamma_{21} \text{extraversion}_{ij} \times \text{experience}_j + \\
+&u_{2j} \text{extraversion}_{ij} + u_{0j}+ e_{ij} 
+\end{align}
+
+<!-- u_{1j} \text{gender}_{ij} +  -->
+
+Setup `R` environment
+```{r}
+library(mice)     # for imputation
+library(ggmice)   # for visualization
+library(ggplot2)  # for visualization
+library(dplyr)    # for data manipulation
+library(lme4)     # for multilevel modeling
+```
+
+
+Load the data
+```{r}
+load("data/popular_MAR.RData")
+```
+
+Inspect the missingness
+```{r}
+plot_pattern(popular_MAR)
+```
+
+Fix cluster-level missingness determinately
+```{r}
+meth <- make.method(popular_MAR)
+meth["experience_j"] <- "2lonly.mean"
+meth[meth != "2lonly.mean"] <- ""
+pred <- make.predictorMatrix(popular_MAR)
+pred[, "cluster_id"] <- -2
+imp <- mice(
+  popular_MAR, 
+  m = 1, 
+  method = meth, 
+  predictorMatrix = pred,
+  maxit = 1)
+plot_pattern(complete(imp))
+```
+
+Does not work if there are inconsistencies within clusters! But we can do this manually.
+
+```{r}
+popular_MAR |>
+  group_by(cluster_id) |>
+  reframe(teacher_experience = unique(experience_j))
+```
+
+This shows us that in the first cluster teacher experience of 4 and 24 is recorded.
+
+```{r}
+popular_MAR |>
+  filter(cluster_id == 1) |>
+  ggplot(aes(experience_j)) + geom_histogram()
+```
+
+For most pupils, teacher experience is 24. We can quite safely assume that the teacher expeience of 4 is a data entry error. We can fix this by over-imputing the teacher experience of 4 to 24, and deductively imputing the missing teacher experience from the same cluster as 24.
+
+# References
+
+
